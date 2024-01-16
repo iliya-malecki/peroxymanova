@@ -11,5 +11,13 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = "0.20.1"
 numpy = "0.20.0"
-polars = "0.35.4"
+# polars = "0.36.2"
 rand = "0.8.5"
+
+
+[dev-dependencies]
+criterion = { version = "0.5.1", features = ["html_reports"] }
+
+[[bench]]
+name = "benches"
+harness = false

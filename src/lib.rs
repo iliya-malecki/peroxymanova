@@ -1,8 +1,7 @@
-use std::io::empty;
 use rand::seq::SliceRandom;
 use pyo3::prelude::*;
-use numpy::{PyReadonlyArray, Ix2, Ix1};
-use polars;
+use numpy::{PyReadonlyArray, Ix2};
+// use polars;
 
 
 fn get_ss_t(sqdistances:&PyReadonlyArray<f64,Ix2>) -> f64 {
@@ -93,6 +92,6 @@ fn permanova(
 #[pymodule]
 #[pyo3(name="_oxide")]
 fn module(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(permanova, m)?)?;
-    Ok(())
+m.add_function(wrap_pyfunction!(permanova, m)?)?;
+Ok(())
 }
