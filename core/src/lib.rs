@@ -1,10 +1,9 @@
 use rand::seq::SliceRandom;
-use pyo3::prelude::*;
 use numpy::{PyReadonlyArray, Ix2};
 // use polars;
 
 
-fn get_ss_t(sqdistances:&PyReadonlyArray<f64,Ix2>) -> f64 {
+pub fn get_ss_t(sqdistances:&PyReadonlyArray<f64,Ix2>) -> f64 {
     let mut sum = 0f64;
     for i in 0..sqdistances.shape()[0] {
         for j in 0..sqdistances.shape()[1] {
@@ -19,7 +18,7 @@ fn get_ss_t(sqdistances:&PyReadonlyArray<f64,Ix2>) -> f64 {
 
 
 
-fn get_ss_w(
+pub fn get_ss_w(
     sqdistances:&PyReadonlyArray<f64,Ix2>,
     labels:&Vec<usize>,
     bincount:&Vec<i64>) -> f64 {
@@ -41,13 +40,12 @@ fn get_ss_w(
 }
 
 
-fn get_f(ss_t: f64, ss_w: f64, a: i64, n:i64) -> f64 {
+pub fn get_f(ss_t: f64, ss_w: f64, a: i64, n:i64) -> f64 {
     let ss_a = ss_t - ss_w;
     (ss_a/(a-1) as f64)/(ss_w/(n-a) as f64)
 }
 
-#[pyfunction]
-fn permanova(
+pub fn permanova(
     sqdistances:PyReadonlyArray<f64,Ix2>,
     mut labels: Vec<usize>,
 ) -> (f64, f64) {
@@ -85,13 +83,4 @@ fn permanova(
             .count() as f64
         / other_fs.len() as f64
     )
-}
-
-
-/// A Python module implemented in Rust.
-#[pymodule]
-#[pyo3(name="_oxide")]
-fn module(_py: Python, m: &PyModule) -> PyResult<()> {
-m.add_function(wrap_pyfunction!(permanova, m)?)?;
-Ok(())
 }

@@ -1,23 +1,5 @@
-[package]
-name = "peroxymanova"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+members = ["api", "core"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[lib]
-name = "peroxymanova"
-crate-type = ["cdylib"]
-
-[dependencies]
-pyo3 = "0.20.1"
+[workspace.dependencies]
 numpy = "0.20.0"
-# polars = "0.36.2"
-rand = "0.8.5"
-
-
-[dev-dependencies]
-criterion = { version = "0.5.1", features = ["html_reports"] }
-
-[[bench]]
-name = "benches"
-harness = false
