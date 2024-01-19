@@ -5,24 +5,24 @@ use rand::seq::SliceRandom;
 
 // use polars;
 
-fn get_ss_t(sqdistances: &Array<f64, Ix2>) -> f64 {
+fn get_ss_t(sqdistances: &ArrayView2<f64>) -> f64 {
     let mut sum = 0f64;
     for i in 0..sqdistances.shape()[0] {
         for j in 0..sqdistances.shape()[1] {
             if i != j {
-                sum += sqdistances[[i,j]];
+                sum += sqdistances[[i, j]];
             }
         }
     }
     return sum / (sqdistances.shape()[0] as f64) / 2.;
 }
 
-fn get_ss_w(sqdistances: &Array<f64, Ix2>, labels: &Vec<usize>, bincount: &Vec<i64>) -> f64 {
+fn get_ss_w(sqdistances: &ArrayView2<f64>, labels: &Vec<usize>, bincount: &Vec<i64>) -> f64 {
     let mut sums = vec![0f64; bincount.len()];
     for i in 0..sqdistances.shape()[0] {
         for j in 0..sqdistances.shape()[0] {
             if labels[i] == labels[j] && i != j {
-                sums[labels[i]] += sqdistances[[i,j]];
+                sums[labels[i]] += sqdistances[[i, j]];
             }
         }
     }
@@ -40,7 +40,7 @@ fn get_f(ss_t: f64, ss_w: f64, a: i64, n: i64) -> f64 {
     (ss_a / (a - 1) as f64) / (ss_w / (n - a) as f64)
 }
 
-pub fn permanova(sqdistances: Array<f64, Ix2>, mut labels: Vec<usize>) -> (f64, f64) {
+pub fn permanova(sqdistances: &ArrayView2<f64>, mut labels: Vec<usize>) -> (f64, f64) {
     let max_label = *(labels.iter().max().unwrap());
     let bincount: Vec<i64> = (0..=max_label)
         .into_iter()
@@ -72,13 +72,13 @@ pub fn generate_data(size: usize, category_count: usize) -> (Array2<f64>, Vec<us
     let mut distances = Array2::random((size, size), Uniform::new(0., 1.));
     for i in 0..size {
         for j in 0..i {
-            let total = distances[[i,j]] + distances[[j, i]];
-            distances[[i,j]] = total;
-            distances[[i,j]] = total;
+            let total = distances[[i, j]] + distances[[j, i]];
+            distances[[i, j]] = total;
+            distances[[i, j]] = total;
         }
     }
     for i in 0..size {
-        distances[[i,i]] = 0.;
+        distances[[i, i]] = 0.;
     }
     let labels = Array1::random(size, Uniform::new(0, category_count));
 

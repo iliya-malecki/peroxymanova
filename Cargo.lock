@@ -424,6 +424,7 @@ dependencies = [
 name = "peroxymanova"
 version = "0.1.0"
 dependencies = [
+ "ndarray",
  "numpy",
  "peroxymanova_core",
  "pyo3",

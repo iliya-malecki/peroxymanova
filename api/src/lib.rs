@@ -5,7 +5,7 @@ use pyo3::prelude::*;
 
 #[pyfunction]
 fn permanova(sqdistances: PyReadonlyArray<f64, Ix2>, labels: Vec<usize>) -> (f64, f64) {
-    return core_permanova(sqdistances, labels);
+    return core_permanova(&sqdistances.as_array(), labels);
 }
 
 #[pymodule]
