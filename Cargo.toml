@@ -1,8 +1,19 @@
-[workspace]
-members = ["api", "core"]
+[package]
+name = "peroxymanova"
+version = "0.1.0"
+edition = "2021"
 
-[workspace.dependencies]
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "peroxymanova"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
 numpy = "0.20.0"
-rand = "0.8.5"
 ndarray = "0.15.6"
+pyo3 = "0.20.1"
 ndarray-rand = "0.14.0"
+rand = "0.8.5"
+
+[dev-dependencies]
+criterion = "0.5.1"

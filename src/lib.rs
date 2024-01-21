@@ -1,3 +1,6 @@
+use numpy::{Ix2, PyReadonlyArray};
+use pyo3::prelude::*;
+// use polars;
 use ndarray::prelude::*;
 use ndarray_rand::rand_distr::Uniform;
 use ndarray_rand::RandomExt;
@@ -40,7 +43,7 @@ fn get_f(ss_t: f64, ss_w: f64, a: i64, n: i64) -> f64 {
     (ss_a / (a - 1) as f64) / (ss_w / (n - a) as f64)
 }
 
-pub fn permanova(sqdistances: &ArrayView2<f64>, mut labels: Vec<usize>) -> (f64, f64) {
+pub fn core_permanova(sqdistances: &ArrayView2<f64>, mut labels: Vec<usize>) -> (f64, f64) {
     let max_label = *(labels.iter().max().unwrap());
     let bincount: Vec<i64> = (0..=max_label)
         .into_iter()
@@ -83,4 +86,17 @@ pub fn generate_data(size: usize, category_count: usize) -> (Array2<f64>, Vec<us
     let labels = Array1::random(size, Uniform::new(0, category_count));
 
     (distances, labels.to_vec())
+}
+
+
+#[pyfunction]
+pub fn permanova(sqdistances: PyReadonlyArray<f64, Ix2>, labels: Vec<usize>) -> (f64, f64) {
+    return core_permanova(&sqdistances.as_array(), labels);
+}
+
+#[pymodule]
+#[pyo3(name = "_oxide")]
+fn module(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(permanova, m)?)?;
+    Ok(())
 }
