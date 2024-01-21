@@ -1,7 +1,7 @@
-use peroxymanova::{generate_data, core_permanova};
+use peroxymanova::{generate_data, _permanova};
 fn main() {
     let (sqdistances, labels) = generate_data(600, 3);
-    let (a, b) = core_permanova(&sqdistances.view(), labels);
+    let (a, b) = _permanova(&sqdistances.view(), labels);
     dbg!(a);
     dbg!(b);
 }

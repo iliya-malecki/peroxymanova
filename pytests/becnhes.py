@@ -1,29 +1,14 @@
 from reference.packed import permanova as packed_permanova
 from reference.square import permanova as square_permanova
-import timeit
-import pandas as pd
+import cProfile
+import numpy as np
 
-def time(fs: list[str]):
-    res = pd.Series({f:timeit.timeit(f, globals=globals()) for f in fs})
-    for scale, unit in [
-        (1e-9, 'ns'),
-        (1e-6, 'us'),
-        (1e-3, 'ms'),
-        (   1,  's')
-    ]:
-        if res.min() < scale:
-            res = (res / scale).round(2).astype(str) + ' ' + unit
-            break
-    res = res.to_frame().reset_index()
-    res.columns = ['call', 'time']
-    print(res.to_string(index=False))
+def main():
+    dist = np.random.random((600,600))
+    dist = dist + dist.T
+    np.fill_diagonal(dist, 0)
+    labels = np.random.randint(0, 3, 600)
+    cProfile.run('square_permanova(dist, labels)', sort='tottime')
 
-def a(x):
-    return x**42
-def b(x):
-    return x*42
-
-time([
-    'a(3)',
-    'b(42)'
-])
+if __name__ == '__main__':
+    main()
