@@ -1,5 +1,5 @@
-from reference.packed import permanova as packed_permanova
-from reference.square import permanova as square_permanova
+from reference import square, packed
+import peroxymanova
 import cProfile
 import numpy as np
 
@@ -8,4 +8,6 @@ dist = np.random.random((size, size))
 dist = dist + dist.T
 np.fill_diagonal(dist, 0)
 labels = np.random.randint(0, 3, size)
-cProfile.run("square_permanova(dist, labels)", sort="tottime")
+cProfile.run("square.permanova(dist, labels)", sort="tottime")
+cProfile.run("packed.permanova(dist, labels)", sort="tottime")
+cProfile.run("peroxymanova.permanova(dist, labels)", sort="tottime")
