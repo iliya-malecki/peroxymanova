@@ -1,2 +1,2 @@
 from ._oxide import permanova
-from ._peroxymanova import run
+from ._peroxymanova import calculate_distances
