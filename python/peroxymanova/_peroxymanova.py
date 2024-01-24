@@ -26,6 +26,7 @@ def run(
 RT = TypeVar('RT')
 CT = TypeVar('CT')
 # the runtime check will be performed by the package
+# am i having too much fun with the type system?
 def pinky_promise_guard(ct: Callable[[T, T], RT], t: T, check_type: type[CT]) -> TypeGuard[Callable[[CT,CT], RT]]:
     return isinstance(t, check_type)
 
@@ -39,12 +40,10 @@ def run(
 
     if engine == 'scipy':
         if isinstance(things, np.ndarray) and len(things.shape) == 2:
-            if isinstance(distance, str) or (
-                callable(distance) and pinky_promise_guard(distance, things[0], NDArray[Any])
-            ):
+            if callable(distance) and pinky_promise_guard(distance, things[0], NDArray[Any]):
                 dist = pdist(things, distance)
-            # elif isinstance(distance, str):
-            #     dist = pdist(things, distance)
+            elif isinstance(distance, str):
+                dist = pdist(things, distance) # type inference in overload hello?
             else:
                 raise ValueError('distance wrong')
         else:
