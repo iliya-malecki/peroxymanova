@@ -1,2 +1,2 @@
 from ._oxide import permanova
-from .bar import foo
+from ._peroxymanova import run
