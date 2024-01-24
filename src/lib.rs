@@ -38,7 +38,7 @@ fn get_ss_w(sqdistances: &ArrayView2<f64>, labels: &Vec<usize>, bincount: &Vec<i
     sum / 2.
 }
 
-fn get_f(ss_t: f64, ss_w: f64, a: i64, n: i64) -> f64 {
+fn get_f(ss_t: f64, ss_w: f64, a: u64, n: u64) -> f64 {
     let ss_a = ss_t - ss_w;
     (ss_a / (a - 1) as f64) / (ss_w / (n - a) as f64)
 }
@@ -51,7 +51,7 @@ pub fn _permanova(sqdistances: &ArrayView2<f64>, mut labels: Vec<usize>) -> (f64
         .collect();
     let ss_t = get_ss_t(&sqdistances);
     let ss_w = get_ss_w(&sqdistances, &labels, &bincount);
-    let f = get_f(ss_t, ss_w, bincount.len() as i64, labels.len() as i64);
+    let f = get_f(ss_t, ss_w, bincount.len() as u64, labels.len() as u64);
 
     let mut other_fs: Vec<f64> = Vec::new();
     let mut rng = rand::thread_rng();
@@ -60,8 +60,8 @@ pub fn _permanova(sqdistances: &ArrayView2<f64>, mut labels: Vec<usize>) -> (f64
         other_fs.push(get_f(
             ss_t,
             get_ss_w(&sqdistances, &labels, &bincount),
-            bincount.len() as i64,
-            labels.len() as i64,
+            bincount.len() as u64,
+            labels.len() as u64,
         ));
     }
 
@@ -95,8 +95,7 @@ pub fn permanova(sqdistances: PyReadonlyArray<f64, Ix2>, labels: Vec<usize>) -> 
 }
 
 #[pymodule]
-#[pyo3(name = "_oxide")]
-fn module(_py: Python, m: &PyModule) -> PyResult<()> {
+fn _oxide(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(permanova, m)?)?;
     Ok(())
 }
