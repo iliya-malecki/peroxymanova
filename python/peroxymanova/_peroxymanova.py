@@ -7,6 +7,15 @@ from scipy.spatial.distance import pdist, _MetricKind, _FloatValue  # type: igno
 T = TypeVar("T")
 
 
+def get_distance_matrix(things: Collection[T], distance: Callable[[T, T], _FloatValue]):
+    dists = np.empty((len(things), len(things)), dtype=np.float64)
+    for i, a in enumerate(things):
+        for j, b in enumerate(things):
+            if i != j:
+                dists[i, j] = np.float64(distance(a, b))
+    return dists
+
+
 @overload
 def calculate_distances(
     things: NDArray[Any], distance: _MetricKind, engine: Literal["scipy"]
@@ -16,7 +25,9 @@ def calculate_distances(
 
 @overload
 def calculate_distances(
-    things: Collection[T], distance: Callable[[T, T], _FloatValue], engine: str
+    things: Collection[T],
+    distance: Callable[[T, T], _FloatValue],
+    engine: Literal["python"],
 ) -> NDArray[np.floating[Any]]:
     ...
 
@@ -53,4 +64,17 @@ def calculate_distances(
                 raise ValueError("distance wrong")
         else:
             raise ValueError("things wrong")
-    raise
+
+    elif engine == "python":
+        if isinstance(distance, str):
+            raise ValueError("distance wrong")
+        return get_distance_matrix(things, distance)
+
+    elif engine == "numba":
+        if isinstance(distance, str):
+            raise ValueError("distance wrong")
+        import numba  # type: ignore[reportMissingTypeStubs]
+
+        return numba.jit(get_distance_matrix)(things, distance)  # type: ignore
+
+    raise ValueError("engine wrong")
