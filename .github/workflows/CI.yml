@@ -6,7 +6,9 @@
 name: CI
 
 on:
-  pull_request:
+  push:
+    tags:
+    - 'v*'
   workflow_dispatch:
 
 permissions:
@@ -102,13 +104,28 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     needs: [linux, windows, macos, sdist]
     steps:
-      - uses: actions/download-artifact@v3
+      - name: Download Artifact
+        id: download_artifact
+        uses: actions/download-artifact@v3
         with:
           name: wheels
-      - name: Publish to PyPI
-        uses: PyO3/maturin-action@v1
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
         env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          command: upload
-          args: --skip-existing *
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.download_artifact.outputs.download-path }}
+          asset_name: wheels
+          asset_content_type: application/zip
