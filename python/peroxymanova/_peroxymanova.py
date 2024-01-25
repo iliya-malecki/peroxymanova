@@ -41,6 +41,12 @@ CT = TypeVar("CT")
 def pinky_promise_guard(
     ct: Callable[[T, T], RT], t: T, check_type: type[CT]
 ) -> TypeGuard[Callable[[CT, CT], RT]]:
+    """
+    check if `t:T` is of type `check_type: CT` and if so,
+    rely on the fact that the callable accepts [T,T] (same as t!)
+    to infer it must also be [CT,CT].
+    This narrowing should be automatic but oh well
+    """
     return isinstance(t, check_type)
 
 
