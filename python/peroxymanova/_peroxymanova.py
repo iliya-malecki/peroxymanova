@@ -112,6 +112,6 @@ def run(
 ) -> tuple[float, float]:
     dist = calculate_distances(things, distance, engine)
     fastlabels = (
-        pl.Series(labels).cast(pl.Categorical()).cast(pl.Int16()).to_numpy().copy()
+        pl.Series(labels).cast(pl.Categorical()).cast(pl.Int64()).to_numpy().copy()
     )
     return permanova(dist, fastlabels)

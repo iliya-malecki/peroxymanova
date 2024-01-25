@@ -21,3 +21,4 @@ Tactical roadmap:
 - Unit testing/property testing/benching both in rust and python
 - Output something user-friendly like a namedtuple
 - Document and provide examples for clarity
+- fix the usize vs int64 situation
