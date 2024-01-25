@@ -1,9 +1,22 @@
-from typing import TypeVar, Collection, Callable, Literal, overload, TypeGuard, Any
+from __future__ import annotations
+from typing import (
+    TypeVar,
+    Collection,
+    Callable,
+    Literal,
+    overload,
+    TypeGuard,
+    Any,
+    TYPE_CHECKING,
+)
 import numpy as np
 from numpy.typing import NDArray
 import polars as pl
-from scipy.spatial.distance import pdist, _MetricKind, _FloatValue  # type: ignore
+from scipy.spatial.distance import pdist
 from ._oxide import permanova
+
+if TYPE_CHECKING:
+    from ._scipy_types import _FloatValue, _MetricKind
 
 T = TypeVar("T")
 
