@@ -10,14 +10,14 @@ T = TypeVar("T")
 @overload
 def calculate_distances(
     things: NDArray[Any], distance: _MetricKind, engine: Literal["scipy"]
-) -> None:
+) -> NDArray[np.floating[Any]]:
     ...
 
 
 @overload
 def calculate_distances(
     things: Collection[T], distance: Callable[[T, T], _FloatValue], engine: str
-) -> None:
+) -> NDArray[np.floating[Any]]:
     ...
 
 
@@ -37,7 +37,7 @@ def calculate_distances(
     things: Collection[T] | NDArray[Any],
     distance: Callable[[T, T], _FloatValue] | _MetricKind,
     engine: str,
-):
+) -> NDArray[np.floating[Any]]:
     if len(things) < 2:
         raise ValueError("len(things) < 2")
 
@@ -53,3 +53,4 @@ def calculate_distances(
                 raise ValueError("distance wrong")
         else:
             raise ValueError("things wrong")
+    raise
