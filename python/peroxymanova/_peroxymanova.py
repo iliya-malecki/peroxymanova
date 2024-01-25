@@ -1,8 +1,9 @@
 from typing import TypeVar, Collection, Callable, Literal, overload, TypeGuard, Any
 import numpy as np
 from numpy.typing import NDArray
+import polars as pl
 from scipy.spatial.distance import pdist, _MetricKind, _FloatValue  # type: ignore
-
+from ._oxide import permanova
 
 T = TypeVar("T")
 
@@ -14,22 +15,6 @@ def get_distance_matrix(things: Collection[T], distance: Callable[[T, T], _Float
             if i != j:
                 dists[i, j] = np.float64(distance(a, b))
     return dists
-
-
-@overload
-def calculate_distances(
-    things: NDArray[Any], distance: _MetricKind, engine: Literal["scipy"]
-) -> NDArray[np.floating[Any]]:
-    ...
-
-
-@overload
-def calculate_distances(
-    things: Collection[T],
-    distance: Callable[[T, T], _FloatValue],
-    engine: Literal["python"],
-) -> NDArray[np.floating[Any]]:
-    ...
 
 
 RT = TypeVar("RT")
@@ -84,3 +69,36 @@ def calculate_distances(
         return numba.jit(get_distance_matrix)(things, distance)  # type: ignore
 
     raise ValueError("engine wrong")
+
+
+@overload
+def run(
+    things: NDArray[Any],
+    distance: _MetricKind,
+    labels: Collection[Any],
+    engine: Literal["scipy"],
+) -> tuple[float, float]:
+    ...
+
+
+@overload
+def run(
+    things: Collection[T],
+    distance: Callable[[T, T], _FloatValue],
+    labels: Collection[Any],
+    engine: Literal["python", "numba"],
+) -> tuple[float, float]:
+    ...
+
+
+def run(
+    things: Collection[T] | NDArray[Any],
+    distance: Callable[[T, T], _FloatValue] | _MetricKind,
+    labels: Collection[Any],
+    engine: Literal["scipy", "python", "numba"],
+) -> tuple[float, float]:
+    dist = calculate_distances(things, distance, engine)
+    fastlabels = (
+        pl.Series(labels).cast(pl.Categorical()).cast(pl.Int16()).to_numpy().copy()
+    )
+    return permanova(dist, fastlabels)
