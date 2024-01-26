@@ -7,7 +7,7 @@ PERMANOVA (Permutational Multivariate Analysis of Variance) is a method for comp
 This package aims to provide quality-of-life bells and whistles that turn this incredible method into something useful day to day. It implements the following workflow:
 
 1. Accept a `Collection` of some things `T`, a `Callable` that can compare two of those `T`, returning a float, and a `Collection` of labels that indicate to which group a given thing `T` belongs to
-2. Efficiently run the `Callable[[T,T], float]` for every possible pair of objects in the `Collection` and build a dissimilarity matrix (TODO)
+2. Efficiently run the `Callable[[T,T], float]` for every possible pair of objects in the `Collection` and build a dissimilarity matrix
 3. Given the dissimilarity matrix and a `Collection` of group-indicating labels, run the PERMANOVA algorithm to get a test statistic and a p-value for the null hypothesis of the groups being all and the same. This step requires a lot of permutations to get the p-value so run it *blazingly fast* in Rust
 
 Strategic roadmap:
@@ -15,10 +15,3 @@ Strategic roadmap:
 - Make a fancy parallelization backend interface for computing pairwise distances. Maybe there could be a backend='ray' that would actually search for a full ray cluster?
 - Since we dream of ray, should we get a cluster for rust side as well? :)
 
-Tactical roadmap:
-- Implement the python part, i.e. pairwise distance calculations
-- CICD
-- Unit testing/property testing/benching both in rust and python
-- Output something user-friendly like a namedtuple
-- Document and provide examples for clarity
-- fix the usize vs int64 situation
