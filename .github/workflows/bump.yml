@@ -1,0 +1,41 @@
+name: Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      suffix:
+        description: 'Specify a rc/beta/other version suffix'
+        required: false
+
+jobs:
+  version_check_and_tag:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.11
+
+    - name: Run Python Script
+      run: |
+        last_version=$(git describe --tags --abbrev=0)
+        new_version=$(python bump.py "$last_version")
+
+        if [ -n "$new_version" ]; then
+          echo "New version detected: $new_version"
+
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+
+          git tag "v$new_version$SUFFIX"
+          git push --tags
+        else
+          echo "No new version detected."
+        fi
+
+      env:
+        SUFFIX: ${{ github.event.inputs.suffix }}
