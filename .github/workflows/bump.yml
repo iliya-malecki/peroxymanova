@@ -25,10 +25,10 @@ jobs:
     - name: Run Python Script
       run: |
         last_version=$(git describe --tags --abbrev=0)
-        new_version=$(python .github/workflows/bump.py "$last_version")
+        python .github/workflows/bump.py "$last_version"
+        echo "new_version is $new_version"
 
         if [ -n "$new_version" ]; then
-          echo "New version detected: $new_version"
 
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Actions"

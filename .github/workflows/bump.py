@@ -1,5 +1,6 @@
 import sys
 import tomllib
+import os
 
 def get_project_version():
     try:
@@ -40,4 +41,4 @@ if __name__ == "__main__":
     new_version = compare_versions(old_version, project_version)
 
     print(f'{new_version = }')
-    print(f"::set-output name=new_version::{new_version}")
+    os.environ['new_version'] = new_version
