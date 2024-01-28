@@ -25,7 +25,7 @@ jobs:
     - name: Run Python Script
       run: |
         last_version=$(git describe --tags --abbrev=0)
-        new_version=$(python bump.py "$last_version")
+        new_version=$(python .github/workflows/bump.py "$last_version")
 
         if [ -n "$new_version" ]; then
           echo "New version detected: $new_version"
