@@ -26,6 +26,7 @@ jobs:
       run: |
         last_version=$(git describe --tags --abbrev=0)
         python .github/workflows/bump.py "$last_version"
+        new_version=${{ env.new_version }}
         echo "new_version is $new_version"
 
         if [ -n "$new_version" ]; then
