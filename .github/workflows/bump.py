@@ -42,4 +42,4 @@ if __name__ == "__main__":
 
     print(f'{new_version = }')
     with open(os.environ['GITHUB_ENV'], 'a') as f:
-        f.write(f'{new_version=}')
+        f.write('new_version=' + new_version)
