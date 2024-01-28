@@ -41,4 +41,5 @@ if __name__ == "__main__":
     new_version = compare_versions(old_version, project_version)
 
     print(f'{new_version = }')
-    os.environ['new_version'] = new_version
+    with open(os.environ['GITHUB_ENV'], 'a') as f:
+        f.write(f'{new_version=}')
