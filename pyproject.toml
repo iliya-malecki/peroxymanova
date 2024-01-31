@@ -17,3 +17,6 @@ classifiers = [
 features = ["pyo3/extension-module"]
 python-source = "python"
 module-name = "peroxymanova._oxide"
+
+[tool.pytest.ini_options]
+testpaths = ["pytests"]
