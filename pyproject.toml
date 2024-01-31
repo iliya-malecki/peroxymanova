@@ -6,12 +6,16 @@ build-backend = "maturin"
 name = "peroxymanova"
 version = "0.0.3"
 requires-python = ">=3.7"
+dependencies = [
+    "polars",
+    "numpy",
+    "scipy"
+]
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
-
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
