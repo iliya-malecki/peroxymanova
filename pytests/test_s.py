@@ -27,4 +27,4 @@ def test_it():
     print(our)
     print(anova)
 
-    assert np.allclose(standard['test statistic'], 42)
+    assert np.allclose(standard['test statistic'], our[0])
