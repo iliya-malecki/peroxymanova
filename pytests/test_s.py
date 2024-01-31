@@ -11,13 +11,11 @@ objects = np.random.random((size, 1))
 dist: NDArray[np.float64] = distance_matrix(objects, objects)
 labels = np.random.randint(0, 2, size)
 
-def test_it():
 
+def test_it():
     standard: dict[str, float] = permanova(
-        DistanceMatrix(dist),
-        labels.copy(),
-        permutations=1000
-    ) # type: ignore
+        DistanceMatrix(dist), labels.copy(), permutations=1000
+    )  # type: ignore
     python = square.permanova(dist**2, labels.copy())
     our = peroxymanova.permanova(dist**2, labels.copy())
     anova = f_oneway(*(objects[labels == i] for i in np.unique(labels)))
@@ -27,4 +25,4 @@ def test_it():
     print(our)
     print(anova)
 
-    assert np.allclose(standard['test statistic'], our[0])
+    assert np.allclose(standard["test statistic"], our[0])

@@ -2,6 +2,7 @@ from typing import Sequence, Collection
 from numba import njit
 import numpy as np
 
+
 @njit
 def get_ss_w(sqdistances: np.ndarray, labels: np.ndarray, bc: np.ndarray):
     sum = np.zeros_like(bc, dtype=np.float64)
@@ -9,7 +10,7 @@ def get_ss_w(sqdistances: np.ndarray, labels: np.ndarray, bc: np.ndarray):
         for j in range(sqdistances.shape[0]):
             if labels[i] == labels[j] and i != j:
                 sum[labels[i]] += sqdistances[i, j]
-    return np.sum(sum/bc/2)
+    return np.sum(sum / bc / 2)
 
 
 def get_ss_t(sqdistances: np.ndarray):
@@ -19,17 +20,16 @@ def get_ss_t(sqdistances: np.ndarray):
             if i != j:
                 sum += sqdistances[i, j]
 
-    return sum/sqdistances.shape[0]/2
+    return sum / sqdistances.shape[0] / 2
 
 
 def get_f(ss_t: np.float64, ss_w: np.float64, a: int, n: int):
     ss_a = ss_t - ss_w
-    f = (ss_a/(a-1))/(ss_w/(n-a))
+    f = (ss_a / (a - 1)) / (ss_w / (n - a))
     return f
 
 
 def permanova(sqdistances: np.ndarray, fastlabels: np.ndarray):
-
     bc = np.bincount(fastlabels)
     ss_t = get_ss_t(sqdistances)
     ss_w = get_ss_w(sqdistances, fastlabels, bc)
@@ -39,12 +39,7 @@ def permanova(sqdistances: np.ndarray, fastlabels: np.ndarray):
     for _ in range(1000):
         np.random.shuffle(fastlabels)
         other_fs.append(
-            get_f(
-                ss_t,
-                get_ss_w(sqdistances, fastlabels, bc),
-                len(bc),
-                len(fastlabels)
-            )
+            get_f(ss_t, get_ss_w(sqdistances, fastlabels, bc), len(bc), len(fastlabels))
         )
 
     return f, (np.array(other_fs) >= f).mean()
