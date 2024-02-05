@@ -1,2 +1,2 @@
 pytest==7.4.0
-skbio==0.5.9
+numba<0.60

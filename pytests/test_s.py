@@ -1,4 +1,3 @@
-from skbio.stats.distance import permanova, DistanceMatrix
 from reference import square
 import peroxymanova
 import numpy as np
@@ -13,16 +12,12 @@ labels = np.random.randint(0, 2, size)
 
 
 def test_it():
-    standard: dict[str, float] = permanova(
-        DistanceMatrix(dist), labels.copy(), permutations=1000
-    )  # type: ignore
     python = square.permanova(dist**2, labels.copy())
     our = peroxymanova.permanova(dist**2, labels.copy())
     anova = f_oneway(*(objects[labels == i] for i in np.unique(labels)))
 
-    print(standard)
     print(python)
     print(our)
     print(anova)
 
-    assert np.allclose(standard["test statistic"], our[0])
+    assert np.allclose(anova.statistic[0], our[0])
