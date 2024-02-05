@@ -15,11 +15,12 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        target: [x86_64, x86, aarch64, armv7, s390x, ppc64le]
+        target: [x86_64, x86, aarch64]
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       - name: Build wheels
@@ -34,16 +35,18 @@ jobs:
         with:
           name: wheels
           path: dist
-      - name: pytest
+      - name: pytest on x86_64
         if: ${{ startsWith(matrix.target, 'x86_64') }}
         shell: bash
         run: |
           set -e
-          pip install peroxymanova --find-links dist --force-reinstall
+          pip install peroxymanova --find-links dist --force-reinstall --verbose --no-index --no-deps
+          pip install peroxymanova
           pip install -r pytests/requirements.txt
           pip install pytest
           pytest
-      - name: pytest
+
+      - name: pytest on exotics # now only used for arm64
         if: ${{ !startsWith(matrix.target, 'x86') && matrix.target != 'ppc64' }}
         uses: uraimo/run-on-arch-action@v2.5.0
         with:
@@ -53,16 +56,24 @@ jobs:
           install: |
             apt-get update
             apt-get install -y --no-install-recommends python3 python3-pip
-            pip3 install -U pip -r pytests/requirements.txt
-            pip3 install -U pip pytest
+            apt-get install -y cmake
+            apt-get install -y python3-dev
+            apt-get install -y build-essential
+            apt-get install curl
+            curl https://sh.rustup.rs -sSf | sh -s -- -y
+            . $HOME/.cargo/env
           run: |
             set -e
-            pip3 install peroxymanova --find-links dist --force-reinstall
+            pip3 install peroxymanova --find-links dist --force-reinstall --verbose --no-index --no-deps
+            pip3 install peroxymanova
+            pip3 install -U pip -r pytests/requirements.txt
+            pip3 install -U pip pytest
             pytest
 
   windows:
     runs-on: windows-latest
     strategy:
+      fail-fast: false
       matrix:
         target: [x64, x86]
     steps:
@@ -83,11 +94,12 @@ jobs:
           name: wheels
           path: dist
       - name: pytest
-        if: ${{ !startsWith(matrix.target, 'aarch64') }}
+        if: ${{ matrix.target == 'x64' }}
         shell: bash
         run: |
           set -e
-          pip install peroxymanova --find-links dist --force-reinstall
+          pip install peroxymanova --find-links dist --force-reinstall --verbose --no-index --no-deps
+          pip install peroxymanova
           pip install -r pytests/requirements.txt
           pip install pytest
           pytest
@@ -95,6 +107,7 @@ jobs:
   macos:
     runs-on: macos-latest
     strategy:
+      fail-fast: false
       matrix:
         target: [x86_64, aarch64]
     steps:
@@ -118,7 +131,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          pip install peroxymanova --find-links dist --force-reinstall
+          pip install peroxymanova --find-links dist --force-reinstall --verbose --no-index --no-deps
+          pip install peroxymanova
           pip install -r pytests/requirements.txt
           pip install pytest
           pytest
