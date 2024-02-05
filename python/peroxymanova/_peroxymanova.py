@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, TypeVar, overload
 from ._oxide import permanova
 import numpy as np
-from numpy.typing import NDArray
 import polars as pl
 from scipy.spatial.distance import pdist
 
@@ -48,17 +47,17 @@ def pinky_promise_guard(
 
 
 def calculate_distances(
-    things: Collection[T] | NDArray[Any],
+    things: Collection[T] | np.ndarray[Any, Any],
     distance: Callable[[T, T], _FloatValue] | _MetricKind,
     engine: str,
-) -> NDArray[np.floating[Any]]:
+) -> np.ndarray[np.floating[Any], Any]:
     if len(things) < 2:
         raise ValueError("len(things) < 2")
 
     if engine == "scipy":
         if isinstance(things, np.ndarray) and len(things.shape) == 2:
             if callable(distance) and pinky_promise_guard(
-                distance, things[0], NDArray[Any]
+                distance, things[0], np.ndarray[Any, Any]
             ):
                 return pdist(things, distance)
             elif isinstance(distance, str):
@@ -85,7 +84,7 @@ def calculate_distances(
 
 @overload
 def run(
-    things: NDArray[Any],
+    things: np.ndarray[Any, Any],
     distance: _MetricKind,
     labels: Collection[Any],
     engine: Literal["scipy"],
@@ -104,7 +103,7 @@ def run(
 
 
 def run(
-    things: Collection[T] | NDArray[Any],
+    things: Collection[T] | np.ndarray[Any, Any],
     distance: Callable[[T, T], _FloatValue] | _MetricKind,
     labels: Collection[Any],
     engine: Literal["scipy", "python", "numba"],

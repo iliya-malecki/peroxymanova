@@ -1,6 +1,6 @@
 import numpy as np
-from numpy.typing import NDArray
+from typing import Any
 
 def permanova(
-    sqdistances: NDArray[np.float64], labels: NDArray[np.int_]
+    sqdistances: np.ndarray[np.float64, Any], labels: np.ndarray[np.int_, Any]
 ) -> tuple[float, float]: ...

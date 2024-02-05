@@ -1,13 +1,14 @@
+from __future__ import annotations
+from typing import Any
 from reference import square
 import peroxymanova
 import numpy as np
 from scipy.spatial import distance_matrix
 from scipy.stats import f_oneway
-from numpy.typing import NDArray
 
 size = 10
 objects = np.random.random((size, 1))
-dist: NDArray[np.float64] = distance_matrix(objects, objects)
+dist: np.ndarray[np.float64, Any] = distance_matrix(objects, objects)
 labels = np.random.randint(0, 2, size)
 
 
