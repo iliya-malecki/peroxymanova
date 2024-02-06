@@ -2,17 +2,21 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, TypeVar, overload
 from ._oxide import permanova, ordinal_encoding
 import numpy as np
-from scipy.spatial.distance import pdist
+from scipy.spatial.distance import pdist, squareform
+from typing import NamedTuple
 
 if TYPE_CHECKING:
-    from typing import Sequence, Callable, Literal, TypeGuard, Any
+    from typing import Collection, Callable, Literal, TypeGuard, Any
     from ._scipy_types import _FloatValue, _MetricKind
 
+class PermanovaResults(NamedTuple):
+    statistic: float
+    pvalue: float
 
 T = TypeVar("T")
 
 
-def get_distance_matrix(things: Sequence[T], distance: Callable[[T, T], _FloatValue]):
+def get_distance_matrix(things: Collection[T], distance: Callable[[T, T], _FloatValue]):
     dists = np.empty((len(things), len(things)), dtype=np.float64)
     for i, a in enumerate(things):
         for j, b in enumerate(things):
@@ -40,7 +44,7 @@ def pinky_promise_guard(
 
 
 def calculate_distances(
-    things: Sequence[T] | np.ndarray[Any, Any],
+    things: Collection[T],
     distance: Callable[[T, T], _FloatValue] | _MetricKind,
     engine: str,
 ) -> np.ndarray[np.floating[Any], Any]:
@@ -52,8 +56,9 @@ def calculate_distances(
             if callable(distance) or isinstance(distance, str):
                 distance: Callable[
                     [np.ndarray, np.ndarray], _FloatValue
-                ] | _MetricKind = distance  # type: ignore - cast
-                return pdist(things, distance)
+                ] | _MetricKind = distance # type: ignore - cast
+                # len(things.shape) == 2 ensures T is ndarray
+                return squareform(pdist(things, distance))
             else:
                 raise ValueError("distance wrong for engine == 'scipy'")
         else:
@@ -62,13 +67,12 @@ def calculate_distances(
     elif engine == "python":
         if isinstance(distance, str):
             raise ValueError("distance wrong")
-        things: Sequence[T] = things # type: ignore - cast
         return get_distance_matrix(things, distance)
 
     elif engine == "numba":
         if isinstance(distance, str):
             raise ValueError("distance wrong")
-        import numba  # type: ignore[reportMissingTypeStubs]
+        import numba
 
         return numba.jit(get_distance_matrix)(things, distance)  # type: ignore
 
@@ -77,31 +81,31 @@ def calculate_distances(
 
 @overload
 def run(
-    things: np.ndarray[Any, Any],
-    distance: _MetricKind,
+    things: Collection[T],
+    distance: Callable[[T, T], _FloatValue],
     labels: np.ndarray[np.str_ | np.int_, Any],
-    engine: Literal["scipy"],
-) -> tuple[float, float]:
+    engine: Literal["python", "numba"],
+) -> PermanovaResults:
     ...
 
 
 @overload
 def run(
-    things: Sequence[T],
-    distance: Callable[[T, T], _FloatValue],
+    things: np.ndarray[Any, Any],
+    distance: _MetricKind,
     labels: np.ndarray[np.str_ | np.int_, Any],
-    engine: Literal["python", "numba"],
-) -> tuple[float, float]:
+    engine: Literal["scipy"],
+) -> PermanovaResults:
     ...
 
 
 def run(
-    things: Sequence[T] | np.ndarray[Any, Any],
+    things: Collection[T],
     distance: Callable[[T, T], _FloatValue] | _MetricKind,
     labels: np.ndarray[np.str_ | np.int_, Any],
     engine: Literal["scipy", "python", "numba"],
-) -> tuple[float, float]:
-    if isinstance(labels[0], str):
+) -> PermanovaResults:
+    if labels.dtype is np.dtype('str'):
         labels: np.ndarray[np.str_, Any] = labels # type: ignore - cast
         fastlabels = ordinal_encoding(labels)
     else:
@@ -111,4 +115,4 @@ def run(
             )  # TODO: do ordinal encoding regardless of type
         fastlabels: np.ndarray[np.uint, Any] = labels # type: ignore - cast
     dist = calculate_distances(things, distance, engine)
-    return permanova(dist, fastlabels)
+    return PermanovaResults(*permanova(dist**2, fastlabels))
