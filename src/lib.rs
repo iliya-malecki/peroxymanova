@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use numpy::{IntoPyArray, Ix2, PyArray1, PyReadonlyArray, ToPyArray};
+use numpy::{IntoPyArray, Ix2, PyArray1, PyReadonlyArray};
 use pyo3::prelude::*;
 // use polars;
 use ndarray::prelude::*;
