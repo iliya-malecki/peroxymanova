@@ -1,25 +1,18 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, TypeVar, overload
-from ._oxide import permanova
+from ._oxide import permanova, ordinal_encoding
 import numpy as np
-import polars as pl
 from scipy.spatial.distance import pdist
 
 if TYPE_CHECKING:
-    from typing import (
-        Collection,
-        Callable,
-        Literal,
-        TypeGuard,
-        Any,
-    )
+    from typing import Sequence, Callable, Literal, TypeGuard, Any, cast
     from ._scipy_types import _FloatValue, _MetricKind
 
 
 T = TypeVar("T")
 
 
-def get_distance_matrix(things: Collection[T], distance: Callable[[T, T], _FloatValue]):
+def get_distance_matrix(things: Sequence[T], distance: Callable[[T, T], _FloatValue]):
     dists = np.empty((len(things), len(things)), dtype=np.float64)
     for i, a in enumerate(things):
         for j, b in enumerate(things):
@@ -47,7 +40,7 @@ def pinky_promise_guard(
 
 
 def calculate_distances(
-    things: Collection[T] | np.ndarray[Any, Any],
+    things: Sequence[T] | np.ndarray[Any, Any],
     distance: Callable[[T, T], _FloatValue] | _MetricKind,
     engine: str,
 ) -> np.ndarray[np.floating[Any], Any]:
@@ -56,21 +49,23 @@ def calculate_distances(
 
     if engine == "scipy":
         if isinstance(things, np.ndarray) and len(things.shape) == 2:
-            if callable(distance) and pinky_promise_guard(
-                distance, things[0], np.ndarray[Any, Any]
-            ):
-                return pdist(things, distance)
-            elif isinstance(distance, str):
-                return pdist(things, distance)  # type inference in overload hello?
+            if callable(distance) or isinstance(distance, str):
+                return pdist(
+                    things,
+                    cast(
+                        Callable[[np.ndarray, np.ndarray], _FloatValue] | _MetricKind,
+                        distance,
+                    ),
+                )
             else:
-                raise ValueError("distance wrong")
+                raise ValueError("distance wrong for engine == 'scipy'")
         else:
             raise ValueError("things wrong")
 
     elif engine == "python":
         if isinstance(distance, str):
             raise ValueError("distance wrong")
-        return get_distance_matrix(things, distance)
+        return get_distance_matrix(cast(Sequence[T], things), distance)
 
     elif engine == "numba":
         if isinstance(distance, str):
@@ -86,7 +81,7 @@ def calculate_distances(
 def run(
     things: np.ndarray[Any, Any],
     distance: _MetricKind,
-    labels: Collection[Any],
+    labels: np.ndarray[np.str_ | np.int_, Any],
     engine: Literal["scipy"],
 ) -> tuple[float, float]:
     ...
@@ -94,22 +89,27 @@ def run(
 
 @overload
 def run(
-    things: Collection[T],
+    things: Sequence[T],
     distance: Callable[[T, T], _FloatValue],
-    labels: Collection[Any],
+    labels: np.ndarray[np.str_ | np.int_, Any],
     engine: Literal["python", "numba"],
 ) -> tuple[float, float]:
     ...
 
 
 def run(
-    things: Collection[T] | np.ndarray[Any, Any],
+    things: Sequence[T] | np.ndarray[Any, Any],
     distance: Callable[[T, T], _FloatValue] | _MetricKind,
-    labels: Collection[Any],
+    labels: np.ndarray[np.str_ | np.int_, Any],
     engine: Literal["scipy", "python", "numba"],
 ) -> tuple[float, float]:
+    if isinstance(labels[0], str):
+        fastlabels = ordinal_encoding(cast(np.ndarray[np.str_, Any], labels))
+    else:
+        if not (min(labels) == 0 and max(labels) == len(np.unique(labels)) - 1):
+            raise ValueError(
+                "in case of integer array it must be an ordinal encoding"
+            )  # TODO: do ordinal encoding regardless of type
+        fastlabels = cast(np.ndarray[np.uint, Any], labels)
     dist = calculate_distances(things, distance, engine)
-    fastlabels = (
-        pl.Series(labels).cast(pl.Categorical()).cast(pl.Int64()).to_numpy().copy()
-    )
     return permanova(dist, fastlabels)

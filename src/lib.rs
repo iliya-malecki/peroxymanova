@@ -1,4 +1,6 @@
-use numpy::{Ix2, PyReadonlyArray};
+use std::collections::HashMap;
+
+use numpy::{IntoPyArray, Ix2, PyArray1, PyReadonlyArray, ToPyArray};
 use pyo3::prelude::*;
 // use polars;
 use ndarray::prelude::*;
@@ -88,14 +90,33 @@ pub fn generate_data(size: usize, category_count: usize) -> (Array2<f64>, Vec<us
     (distances, labels.to_vec())
 }
 
-
 #[pyfunction]
 pub fn permanova(sqdistances: PyReadonlyArray<f64, Ix2>, labels: Vec<usize>) -> (f64, f64) {
     return _permanova(&sqdistances.as_array(), labels);
 }
 
+#[pyfunction]
+pub fn ordinal_encoding<'py>(py: Python<'py>, labels: Vec<String>) -> &'py PyArray1<usize> {
+    let mut last = 0usize;
+    let mut dic = HashMap::<String, usize>::new();
+
+    labels
+        .iter()
+        .map(|key| match dic.get(key) {
+            None => {
+                dic.insert(key.clone(), last);
+                last += 1;
+                last - 1
+            }
+            Some(x) => *x,
+        })
+        .collect::<Vec<_>>()
+        .into_pyarray(py)
+}
+
 #[pymodule]
 fn _oxide(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(permanova, m)?)?;
+    m.add_function(wrap_pyfunction!(ordinal_encoding, m)?)?;
     Ok(())
 }
