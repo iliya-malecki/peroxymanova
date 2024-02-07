@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, TypeVar, overload
+from typing import TYPE_CHECKING, TypeVar, overload, cast
 from ._oxide import permanova, ordinal_encoding
 import numpy as np
 from scipy.spatial.distance import pdist, squareform
@@ -9,9 +9,11 @@ if TYPE_CHECKING:
     from typing import Collection, Callable, Literal, TypeGuard, Any
     from ._scipy_types import _FloatValue, _MetricKind
 
+
 class PermanovaResults(NamedTuple):
     statistic: float
     pvalue: float
+
 
 T = TypeVar("T")
 
@@ -54,11 +56,16 @@ def calculate_distances(
     if engine == "scipy":
         if isinstance(things, np.ndarray) and len(things.shape) == 2:
             if callable(distance) or isinstance(distance, str):
-                distance: Callable[
-                    [np.ndarray, np.ndarray], _FloatValue
-                ] | _MetricKind = distance # type: ignore - cast
                 # len(things.shape) == 2 ensures T is ndarray
-                return squareform(pdist(things, distance))
+                return squareform(
+                    pdist(
+                        things,
+                        cast(
+                            "Callable[[np.ndarray, np.ndarray], _FloatValue] | _MetricKind",
+                            distance,
+                        ),
+                    )
+                )
             else:
                 raise ValueError("distance wrong for engine == 'scipy'")
         else:
@@ -105,14 +112,13 @@ def run(
     labels: np.ndarray[np.str_ | np.int_, Any],
     engine: Literal["scipy", "python", "numba"],
 ) -> PermanovaResults:
-    if labels.dtype is np.dtype('str'):
-        labels: np.ndarray[np.str_, Any] = labels # type: ignore - cast
-        fastlabels = ordinal_encoding(labels)
+    if labels.dtype is np.dtype("str"):
+        fastlabels = ordinal_encoding(cast("np.ndarray[np.str_, Any]", labels))
     else:
         if not (min(labels) == 0 and max(labels) == len(np.unique(labels)) - 1):
             raise ValueError(
                 "in case of integer array it must be an ordinal encoding"
             )  # TODO: do ordinal encoding regardless of type
-        fastlabels: np.ndarray[np.uint, Any] = labels # type: ignore - cast
+        fastlabels = cast("np.ndarray[np.uint, Any]", labels)
     dist = calculate_distances(things, distance, engine)
     return PermanovaResults(*permanova(dist**2, fastlabels))
