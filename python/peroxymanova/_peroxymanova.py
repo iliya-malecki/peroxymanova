@@ -5,7 +5,7 @@ import numpy as np
 from typing import NamedTuple
 
 if TYPE_CHECKING:
-    from typing import Collection, Callable, Literal, TypeGuard, Any
+    from typing import Collection, Callable, Literal, Any
 
 
 class PermanovaResults(NamedTuple):
@@ -23,24 +23,6 @@ def get_distance_matrix(things: Collection[T], distance: Callable[[T, T], np.flo
             if i != j:
                 dists[i, j] = np.float64(distance(a, b))
     return dists
-
-
-RT = TypeVar("RT")
-CT = TypeVar("CT")
-
-
-# the runtime check will be performed by the package
-# am i having too much fun with the type system?
-def pinky_promise_guard(
-    ct: Callable[[T, T], RT], t: T, check_type: type[CT]
-) -> TypeGuard[Callable[[CT, CT], RT]]:
-    """
-    check if `t:T` is of type `check_type: CT` and if so,
-    rely on the fact that the callable accepts [T,T] (same as t!)
-    to infer it must also be [CT,CT].
-    This narrowing should be automatic but oh well
-    """
-    return isinstance(t, check_type)
 
 
 def calculate_distances(
@@ -70,6 +52,7 @@ def run(
     distance: Callable[[T, T], np.float64],
     labels: np.ndarray[np.str_ | np.int_, Any],
     engine: Literal["python", "numba"],
+    already_squared=False,
 ) -> PermanovaResults:
     if labels.dtype is np.dtype(str):
         fastlabels = ordinal_encoding(cast("np.ndarray[np.str_, Any]", labels))
@@ -80,4 +63,6 @@ def run(
             )  # TODO: do ordinal encoding regardless of type
         fastlabels = cast("np.ndarray[np.uint, Any]", labels)
     dist = calculate_distances(things, distance, engine)
-    return PermanovaResults(*permanova(dist**2, fastlabels))
+    if not already_squared:
+        dist **= 2
+    return PermanovaResults(*permanova(dist, fastlabels))
