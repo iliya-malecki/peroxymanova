@@ -1,12 +1,12 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, TypeVar, cast, Sequence
+from typing import TYPE_CHECKING, TypeVar, cast, Sequence, Iterator
 from ._oxide import permanova, ordinal_encoding
 import numpy as np
 from typing import NamedTuple
 from concurrent.futures import ProcessPoolExecutor
 
 if TYPE_CHECKING:
-    from typing import Collection, Callable, Literal, Any
+    from typing import Iterable, Callable, Literal, Any
 
 
 class PermanovaResults(NamedTuple):
@@ -35,22 +35,28 @@ def get_distance_matrix_parallel(
         return np.array(ppe.map(access_helper, range(len(things))), dtype=np.float64)
 
 
-def get_distance_matrix(things: Collection[T], distance: Callable[[T, T], np.float64]):
-    dists = np.empty((len(things), len(things)), dtype=np.float64)
+def get_distance_matrix(things: Iterable[T], distance: Callable[[T, T], np.float64]):
+    dists = []
     for i, a in enumerate(things):
+        row = []
         for j, b in enumerate(things):
-            if i != j:
-                dists[i, j] = np.float64(distance(a, b))
-    return dists
+            if i == j:
+                row.append(0.0)
+            else:
+                row.append(distance(a, b))
+        dists.append(row)
+    return np.array(dists)
 
 
 def calculate_distances(
-    things: Collection[T] | Sequence[T],
+    things: Iterable[T] | Sequence[T],
     distance: Callable[[T, T], np.float64],
     engine: Literal["python", "concurrent.futures", "numba"],
 ) -> np.ndarray[np.floating[Any], Any]:
-    if len(things) < 2:
-        raise ValueError("len(things) < 2")
+    if isinstance(things, Iterator):
+        raise ValueError(
+            "`things` should be immutable on read, i.e. be an `Iterable` and not `Iterator`"
+        )
 
     if not callable(distance):
         raise ValueError("distance wrong")
@@ -75,7 +81,7 @@ def calculate_distances(
 
 
 def run(
-    things: Collection[T] | Sequence[T],
+    things: Iterable[T] | Sequence[T],
     distance: Callable[[T, T], np.float64],
     labels: np.ndarray[np.str_ | np.int_, Any],
     engine: Literal["python", "numba"],
