@@ -25,14 +25,8 @@ class MockDataLoaderIndexable(Generic[T]):
     def __getitem__(self, __key: int) -> T:
         return self.arr[__key]
 
-    def __iter__(self) -> Iterator[T]:
-        yield from self.arr
-
     def __len__(self) -> int:
         return len(self.arr)
-
-    def __contains__(self, item):
-        return item in self.arr
 
 
 def test_it():
@@ -40,13 +34,13 @@ def test_it():
     our = peroxymanova.permanova(dist**2, labels.astype(np.uint))
     anova = f_oneway(*(objects[labels == i] for i in np.unique(labels)))
     run_py_results = peroxymanova.run(objects, distance_function, labels, "python")
-    run_sci_results = peroxymanova.run(
+    run_mp_np_results = peroxymanova.run(
         objects,
         distance_function,
         labels,
         "concurrent.futures",
     )
-    run_sci_results = peroxymanova.run(
+    run_mp_results = peroxymanova.run(
         MockDataLoaderIndexable(objects),
         distance_function,
         labels,
@@ -55,4 +49,5 @@ def test_it():
 
     assert np.allclose(anova.statistic[0], our[0])
     assert np.allclose(anova.statistic[0], run_py_results.statistic)
-    assert np.allclose(anova.statistic[0], run_sci_results.statistic)
+    assert np.allclose(anova.statistic[0], run_mp_np_results.statistic)
+    assert np.allclose(anova.statistic[0], run_mp_results.statistic)
