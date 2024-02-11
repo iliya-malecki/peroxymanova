@@ -8,7 +8,7 @@ from scipy.stats import f_oneway
 
 size = 10
 objects = np.random.random((size, 1))
-dist: np.ndarray[np.float64, Any] = distance_matrix(objects, objects)
+dist: np.ndarray[Any, np.dtype[np.float64]] = distance_matrix(objects, objects)
 labels = np.random.randint(0, 2, size)
 
 T = TypeVar("T", covariant=True)
@@ -37,7 +37,7 @@ class MockDataLoaderIndexable(Generic[T]):
 
 def test_it():
     python = square.permanova(dist**2, labels.copy())
-    our = peroxymanova.permanova(dist**2, labels.copy())
+    our = peroxymanova.permanova(dist**2, labels.astype(np.uint))
     anova = f_oneway(*(objects[labels == i] for i in np.unique(labels)))
     run_py_results = peroxymanova.run(objects, distance_function, labels, "python")
     run_sci_results = peroxymanova.run(

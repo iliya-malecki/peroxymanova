@@ -81,7 +81,7 @@ def calculate_distances(
     things: Iterable[T],
     distance: Callable[[T, T], np.float64],
     engine: Literal["python", "numba"],
-) -> np.ndarray[np.floating[Any], Any]:
+) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
     ...
 
 
@@ -91,7 +91,7 @@ def calculate_distances(
     distance: Callable[[T, T], np.float64],
     engine: Literal["concurrent.futures"],
     workers: int,
-) -> np.ndarray[np.floating[Any], Any]:
+) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
     ...
 
 
@@ -100,7 +100,7 @@ def calculate_distances(
     distance: Callable[[T, T], np.float64],
     engine: Literal["python", "numba", "concurrent.futures"],
     workers: int | None = None,
-) -> np.ndarray[np.floating[Any], Any]:
+) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
     return _calculate_distances(
         things=things, distance=distance, engine=engine, workers=workers
     )
@@ -111,7 +111,7 @@ def _calculate_distances(
     distance: Callable[[T, T], np.float64],
     engine: Literal["python", "numba", "concurrent.futures"],
     workers: int | None = None,
-) -> np.ndarray[np.floating[Any], Any]:
+) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
     if isinstance(things, Iterator):
         raise ValueError(
             "`things` should be immutable on read, i.e. be an `Iterable` and not `Iterator`"
@@ -174,13 +174,13 @@ def run(
     workers: int | None = None,
 ) -> PermanovaResults:
     if labels.dtype is np.dtype(str):
-        fastlabels = ordinal_encoding(cast("np.ndarray[np.str_, Any]", labels))
+        fastlabels = ordinal_encoding(cast("np.ndarray[Any, np.dtype[np.str_]]", labels))
     else:
         if not (min(labels) == 0 and max(labels) == len(np.unique(labels)) - 1):
             raise ValueError(
                 "in case of integer array it must be an ordinal encoding"
             )  # TODO: do ordinal encoding regardless of type
-        fastlabels = cast("np.ndarray[np.uint, Any]", labels)
+        fastlabels = labels.astype(np.uint)
     dist = _calculate_distances(things, distance, engine, workers)
     if not already_squared:
         dist **= 2
