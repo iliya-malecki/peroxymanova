@@ -18,13 +18,13 @@ from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 
 
+T = TypeVar("T")
+Tc = TypeVar("Tc", covariant=True)
+
+
 class PermanovaResults(NamedTuple):
     statistic: float
     pvalue: float
-
-
-T = TypeVar("T")
-Tc = TypeVar("Tc", covariant=True)
 
 
 @runtime_checkable
@@ -117,10 +117,10 @@ def _calculate_distances(
             "`things` should be immutable on read, i.e. be an `Iterable` and not `Iterator`"
         )
     if workers is not None and engine in ["python", "numba"]:
-        raise ValueError("`workers` is an option for concurrent.futures")
+        raise ValueError("`workers` is an option for engine='concurrent.futures'")
 
     if not callable(distance):
-        raise ValueError("distance wrong")
+        raise ValueError("distance must be a callable")
 
     if engine == "python":
         if not isinstance(things, Iterable):
@@ -140,7 +140,7 @@ def _calculate_distances(
 
         return numba.jit(get_distance_matrix)(things, distance)  # type: ignore
 
-    raise ValueError("engine wrong")
+    raise ValueError("engine isnt in the list of allowed ones, consult the type hints")
 
 
 @overload
