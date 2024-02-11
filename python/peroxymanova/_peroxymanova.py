@@ -4,7 +4,6 @@ from typing import (
     Protocol,
     Iterator,
     Iterable,
-    Collection,
     Callable,
     Literal,
     Any,
@@ -16,6 +15,7 @@ from ._oxide import permanova, ordinal_encoding
 import numpy as np
 from typing import NamedTuple
 from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 
 
 class PermanovaResults(NamedTuple):
@@ -28,27 +28,39 @@ Tc = TypeVar("Tc", covariant=True)
 
 
 @runtime_checkable
-class AnySequence(Collection, Protocol[Tc]):
-    def __getitem__(self, key: int, /) -> Tc:
+class AnySequence(Protocol[Tc]):
+    def __getitem__(self, __key: int) -> Tc:
         ...
+
+    def __len__(self) -> int:
+        ...
+
+
+def _access_helper(
+    i: int, distance: Callable[[T, T], np.float64], things: AnySequence[T]
+):
+    """
+    used for retrieving the `things` elements one by one
+    regardless of how the tasks were sent to the worker,
+    since the tasks are just ints
+    """
+    thing = things[i]  # run __getitem__ once on the worker
+    return [distance(thing, things[j]) if i != j else 0.0 for j in range(len(things))]
 
 
 def get_distance_matrix_parallel(
     things: AnySequence[T], distance: Callable[[T, T], np.float64], workers: int | None
 ):
-    def access_helper(i: int):
-        """
-        used for retrieving the `things` elements one by one
-        regardless of how the tasks were sent to the worker,
-        since the tasks are just ints
-        """
-        thing = things[i]  # run __getitem__ once
-        return [
-            distance(thing, things[j]) if i != j else 0.0 for j in range(len(things))
-        ]
-
     with ProcessPoolExecutor(max_workers=workers) as ppe:
-        return np.array(ppe.map(access_helper, range(len(things))), dtype=np.float64)
+        return np.array(
+            list(
+                ppe.map(
+                    partial(_access_helper, distance=distance, things=things),
+                    range(len(things)),
+                )
+            ),
+            dtype=np.float64,
+        )
 
 
 def get_distance_matrix(things: Iterable[T], distance: Callable[[T, T], np.float64]):
@@ -75,7 +87,7 @@ def calculate_distances(
 
 @overload
 def calculate_distances(
-    things: Iterable[T] | AnySequence[T],
+    things: AnySequence[T],
     distance: Callable[[T, T], np.float64],
     engine: Literal["concurrent.futures"],
     workers: int,
@@ -100,7 +112,7 @@ def _calculate_distances(
     engine: Literal["python", "numba", "concurrent.futures"],
     workers: int | None = None,
 ) -> np.ndarray[np.floating[Any], Any]:
-    if isinstance(things, Iterator) and engine in ["python", "numba"]:
+    if isinstance(things, Iterator):
         raise ValueError(
             "`things` should be immutable on read, i.e. be an `Iterable` and not `Iterator`"
         )
@@ -111,6 +123,8 @@ def _calculate_distances(
         raise ValueError("distance wrong")
 
     if engine == "python":
+        if not isinstance(things, Iterable):
+            raise ValueError("`things` must be a `Iterable` for engine == 'python'")
         return get_distance_matrix(things, distance)
 
     elif engine == "concurrent.futures":
