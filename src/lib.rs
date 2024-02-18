@@ -1,14 +1,13 @@
-use std::collections::HashMap;
-
-use numpy::{IntoPyArray, Ix2, PyArray1, PyReadonlyArray};
-use pyo3::prelude::*;
-// use polars;
 use ndarray::prelude::*;
 use ndarray_rand::rand_distr::Uniform;
 use ndarray_rand::RandomExt;
+use numpy::{IntoPyArray, Ix2, PyArray1, PyReadonlyArray};
+use paste;
+use pyo3::prelude::*;
 use rand::seq::SliceRandom;
+use std::collections::HashMap;
+use std::hash::Hash;
 
-// use polars;
 
 fn get_ss_t(sqdistances: &ArrayView2<f64>) -> f64 {
     let mut sum = 0f64;
@@ -95,10 +94,9 @@ pub fn permanova(sqdistances: PyReadonlyArray<f64, Ix2>, labels: Vec<usize>) -> 
     return _permanova(&sqdistances.as_array(), labels);
 }
 
-#[pyfunction]
-pub fn ordinal_encoding<'py>(py: Python<'py>, labels: Vec<String>) -> &'py PyArray1<usize> {
+pub fn ordinal_encoding<T: Eq + Hash + Clone>(labels: Vec<T>) -> Vec<usize> {
     let mut last = 0usize;
-    let mut dic = HashMap::<String, usize>::new();
+    let mut dic = HashMap::<T, usize>::new();
 
     labels
         .iter()
@@ -111,12 +109,29 @@ pub fn ordinal_encoding<'py>(py: Python<'py>, labels: Vec<String>) -> &'py PyArr
             Some(x) => *x,
         })
         .collect::<Vec<_>>()
-        .into_pyarray(py)
+}
+
+
+/// implement ordinal_encoding for a concrete type, giving it a `$dtype` name in the module.
+/// The secret handshake is that the name must be a valid numpy `dtype.name`.
+macro_rules! concrete_ordinal_encoding {
+    ($typename: ident, $dtype: literal, $pymodule: ident) => {
+        paste::item! {
+            #[pyfunction]
+            fn [<ordinal_encoding_$dtype>]<'py>(py: Python<'py>, labels: Vec<$typename>) -> &'py PyArray1<usize> {
+                ordinal_encoding(labels).into_pyarray(py)
+            }
+            $pymodule.add_function(wrap_pyfunction!([<ordinal_encoding_$dtype>], $pymodule)?)?;
+        }
+    };
 }
 
 #[pymodule]
 fn _oxide(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(permanova, m)?)?;
-    m.add_function(wrap_pyfunction!(ordinal_encoding, m)?)?;
+    concrete_ordinal_encoding!(String, "str", m);
+    concrete_ordinal_encoding!(i64, "int64", m);
+    concrete_ordinal_encoding!(i64, "int32", m);
+    concrete_ordinal_encoding!(i64, "int16", m);
     Ok(())
 }

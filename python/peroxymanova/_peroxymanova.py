@@ -7,11 +7,11 @@ from typing import (
     Callable,
     Literal,
     Any,
-    cast,
     runtime_checkable,
     overload,
 )
-from ._oxide import permanova, ordinal_encoding
+from ._oxide import permanova
+from . import _oxide
 import numpy as np
 from typing import NamedTuple
 from concurrent.futures import ProcessPoolExecutor
@@ -20,6 +20,18 @@ from functools import partial
 
 T = TypeVar("T")
 Tc = TypeVar("Tc", covariant=True)
+
+
+def ordinal_encoding(
+    arr: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
+) -> np.ndarray[Any, np.dtype[np.uint]]:
+    if not isinstance(arr, np.ndarray):
+        raise TypeError("input should be a `np.ndarray`")
+    try:
+        func = getattr(_oxide, f"ordinal_encoding_{arr.dtype.name}")
+    except NameError:
+        raise TypeError(f"input dtype {arr.dtype} not understood")
+    return func(arr)
 
 
 class PermanovaResults(NamedTuple):
@@ -147,7 +159,7 @@ def _calculate_distances(
 def run(
     things: Iterable[T],
     distance: Callable[[T, T], np.float64],
-    labels: np.ndarray[Any, np.dtype[np.str_ | np.int_]],
+    labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
     engine: Literal["python", "numba"],
     already_squared=False,
 ) -> PermanovaResults:
@@ -158,7 +170,7 @@ def run(
 def run(
     things: AnySequence[T],
     distance: Callable[[T, T], np.float64],
-    labels: np.ndarray[Any, np.dtype[np.str_ | np.int_]],
+    labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
     engine: Literal["concurrent.futures"],
     already_squared=False,
 ) -> PermanovaResults:
@@ -168,19 +180,19 @@ def run(
 def run(
     things: Iterable[T] | AnySequence[T],
     distance: Callable[[T, T], np.float64],
-    labels: np.ndarray[Any, np.dtype[np.str_ | np.int_]],
+    labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
     engine: Literal["python", "numba", "concurrent.futures"],
     already_squared=False,
     workers: int | None = None,
 ) -> PermanovaResults:
-    if labels.dtype is np.dtype(str):
-        fastlabels = ordinal_encoding(cast("np.ndarray[Any, np.dtype[np.str_]]", labels))
+    if (
+        labels.dtype.kind in ["i", "u"]
+        and min(labels) == 0
+        and max(labels) == len(np.unique(labels)) - 1
+    ):
+        fastlabels = labels.astype(np.uint, copy=False)  # if possible, dont copy
     else:
-        if not (min(labels) == 0 and max(labels) == len(np.unique(labels)) - 1):
-            raise ValueError(
-                "in case of integer array it must be an ordinal encoding"
-            )  # TODO: do ordinal encoding regardless of type
-        fastlabels = labels.astype(np.uint)
+        fastlabels = ordinal_encoding(labels)
     dist = _calculate_distances(things, distance, engine, workers)
     if not already_squared:
         dist **= 2
