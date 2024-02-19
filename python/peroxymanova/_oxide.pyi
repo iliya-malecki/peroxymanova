@@ -6,4 +6,4 @@ def permanova(
     labels: np.ndarray[Any, np.dtype[np.uint]],
 ) -> tuple[float, float]: ...
 
-ordinal_encoding_dtypes = np.str_ | np.int64
+ordinal_encoding_dtypes = np.str_ | np.int64 | np.int32 | np.int16

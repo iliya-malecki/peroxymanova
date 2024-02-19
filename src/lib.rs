@@ -8,7 +8,6 @@ use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::hash::Hash;
 
-
 fn get_ss_t(sqdistances: &ArrayView2<f64>) -> f64 {
     let mut sum = 0f64;
     for i in 0..sqdistances.shape()[0] {
@@ -44,6 +43,7 @@ fn get_f(ss_t: f64, ss_w: f64, a: u64, n: u64) -> f64 {
     (ss_a / (a - 1) as f64) / (ss_w / (n - a) as f64)
 }
 
+// Vec<usize> is used since we have to consume it due to the shuffling, no use asking for views
 pub fn _permanova(sqdistances: &ArrayView2<f64>, mut labels: Vec<usize>) -> (f64, f64) {
     let max_label = *(labels.iter().max().unwrap());
     let bincount: Vec<i64> = (0..=max_label)
@@ -111,7 +111,6 @@ pub fn ordinal_encoding<T: Eq + Hash + Clone>(labels: Vec<T>) -> Vec<usize> {
         .collect::<Vec<_>>()
 }
 
-
 /// implement ordinal_encoding for a concrete type, giving it a `$dtype` name in the module.
 /// The secret handshake is that the name must be a valid numpy `dtype.name`.
 macro_rules! concrete_ordinal_encoding {
@@ -131,7 +130,7 @@ fn _oxide(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(permanova, m)?)?;
     concrete_ordinal_encoding!(String, "str", m);
     concrete_ordinal_encoding!(i64, "int64", m);
-    concrete_ordinal_encoding!(i64, "int32", m);
-    concrete_ordinal_encoding!(i64, "int16", m);
+    concrete_ordinal_encoding!(i32, "int32", m);
+    concrete_ordinal_encoding!(i16, "int16", m);
     Ok(())
 }
