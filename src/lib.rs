@@ -78,7 +78,7 @@ pub fn generate_data(size: usize, category_count: usize) -> (Array2<f64>, Vec<us
         for j in 0..i {
             let total = distances[[i, j]] + distances[[j, i]];
             distances[[i, j]] = total;
-            distances[[i, j]] = total;
+            distances[[j, i]] = total;
         }
     }
     for i in 0..size {

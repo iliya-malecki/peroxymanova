@@ -8,7 +8,7 @@ from scipy.stats import f_oneway
 import pytest
 import numba
 
-size = 10
+size = 100
 objects = np.random.random((size, 1))
 dist: np.ndarray[Any, np.dtype[np.float64]] = distance_matrix(objects, objects)
 labels = np.random.randint(0, 2, size)
