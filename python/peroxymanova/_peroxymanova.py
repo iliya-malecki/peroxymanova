@@ -172,7 +172,7 @@ def _calculate_distances(
 
 
 @overload
-def run(
+def permanova_pipeline(
     things: Iterable[T],
     distance: Callable[[T, T], np.float64],
     labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
@@ -183,7 +183,7 @@ def run(
 
 
 @overload
-def run(
+def permanova_pipeline(
     things: AnySequence[T],
     distance: Callable[[T, T], np.float64],
     labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
@@ -193,7 +193,7 @@ def run(
     ...
 
 
-def run(
+def permanova_pipeline(
     things: Iterable[T] | AnySequence[T],
     distance: Callable[[T, T], np.float64],
     labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
