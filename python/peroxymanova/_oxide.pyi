@@ -2,6 +2,8 @@ import numpy as np
 from typing import Any
 
 def permanova(
-    sqdistances: np.ndarray[np.float64, Any], labels: np.ndarray[np.uint, Any]
+    sqdistances: np.ndarray[Any, np.dtype[np.float64]],
+    labels: np.ndarray[Any, np.dtype[np.uint]],
 ) -> tuple[float, float]: ...
-def ordinal_encoding(arr: np.ndarray[np.str_, Any]) -> np.ndarray[np.uint, Any]: ...
+
+ordinal_encoding_dtypes = np.str_ | np.int64 | np.int32 | np.int16

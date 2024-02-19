@@ -1,13 +1,41 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, TypeVar, overload, cast
-from ._oxide import permanova, ordinal_encoding
+from typing import (
+    TypeVar,
+    Protocol,
+    Iterator,
+    Iterable,
+    Callable,
+    Literal,
+    Any,
+    runtime_checkable,
+    overload,
+)
+from ._oxide import permanova
+from . import _oxide
 import numpy as np
-from scipy.spatial.distance import pdist, squareform
 from typing import NamedTuple
+from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 
-if TYPE_CHECKING:
-    from typing import Collection, Callable, Literal, TypeGuard, Any
-    from ._scipy_types import _FloatValue, _MetricKind
+
+T = TypeVar("T")
+Tc = TypeVar("Tc", covariant=True)
+
+
+def ordinal_encoding(
+    arr: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
+) -> np.ndarray[Any, np.dtype[np.uint]]:
+    if not isinstance(arr, np.ndarray):
+        raise TypeError("input should be a `np.ndarray`")
+    if arr.dtype.name.startswith(("str", "bytes", "void")):
+        suffix = "".join(x for x in arr.dtype.name if x.isalpha())
+    else:
+        suffix = arr.dtype.name
+    try:
+        func = getattr(_oxide, f"ordinal_encoding_{suffix}")
+    except NameError:
+        raise TypeError(f"input dtype {arr.dtype} not understood")
+    return func(arr)
 
 
 class PermanovaResults(NamedTuple):
@@ -15,110 +43,173 @@ class PermanovaResults(NamedTuple):
     pvalue: float
 
 
-T = TypeVar("T")
+@runtime_checkable
+class AnySequence(Protocol[Tc]):
+    def __getitem__(self, __key: int) -> Tc:
+        ...
+
+    def __len__(self) -> int:
+        ...
 
 
-def get_distance_matrix(things: Collection[T], distance: Callable[[T, T], _FloatValue]):
-    dists = np.empty((len(things), len(things)), dtype=np.float64)
+def _access_helper(
+    i: int, distance: Callable[[T, T], np.float64], things: AnySequence[T]
+):
+    """
+    used for retrieving the `things` elements one by one
+    regardless of how the tasks were sent to the worker,
+    since the tasks are just ints
+    """
+    thing = things[i]  # run __getitem__ once on the worker
+    return [distance(thing, things[j]) if i != j else 0.0 for j in range(len(things))]
+
+
+def get_distance_matrix_parallel(
+    things: AnySequence[T], distance: Callable[[T, T], np.float64], workers: int | None
+):
+    with ProcessPoolExecutor(max_workers=workers) as ppe:
+        return np.array(
+            list(
+                ppe.map(
+                    partial(_access_helper, distance=distance, things=things),
+                    range(len(things)),
+                )
+            ),
+            dtype=np.float64,
+        )
+
+
+def get_distance_matrix(things: Iterable[T], distance: Callable[[T, T], np.float64]):
+    dists = []
     for i, a in enumerate(things):
+        row = []
         for j, b in enumerate(things):
-            if i != j:
-                dists[i, j] = np.float64(distance(a, b))
+            if i == j:
+                row.append(0.0)
+            else:
+                row.append(distance(a, b))
+        dists.append(row)
+    return np.array(dists)
+
+
+def get_distance_matrix_numba(
+    things: AnySequence[T], distance: Callable[[T, T], np.float64]
+):
+    dists = np.empty((len(things), len(things)), dtype=np.float64)
+    for i in range(len(things)):
+        for j in range(len(things)):
+            if i == j:
+                dists[j, i] = 0.0
+            else:
+                dists[j, i] = distance(things[i], things[j])
     return dists
 
 
-RT = TypeVar("RT")
-CT = TypeVar("CT")
+@overload
+def calculate_distances(
+    things: Iterable[T],
+    distance: Callable[[T, T], np.float64],
+    engine: Literal["python"],
+) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
+    ...
 
 
-# the runtime check will be performed by the package
-# am i having too much fun with the type system?
-def pinky_promise_guard(
-    ct: Callable[[T, T], RT], t: T, check_type: type[CT]
-) -> TypeGuard[Callable[[CT, CT], RT]]:
-    """
-    check if `t:T` is of type `check_type: CT` and if so,
-    rely on the fact that the callable accepts [T,T] (same as t!)
-    to infer it must also be [CT,CT].
-    This narrowing should be automatic but oh well
-    """
-    return isinstance(t, check_type)
+@overload
+def calculate_distances(
+    things: AnySequence[T],
+    distance: Callable[[T, T], np.float64],
+    engine: Literal["concurrent.futures", "numba"],
+    workers: int,
+) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
+    ...
 
 
 def calculate_distances(
-    things: Collection[T],
-    distance: Callable[[T, T], _FloatValue] | _MetricKind,
-    engine: str,
-) -> np.ndarray[np.floating[Any], Any]:
-    if len(things) < 2:
-        raise ValueError("len(things) < 2")
+    things: Iterable[T] | AnySequence[T],
+    distance: Callable[[T, T], np.float64],
+    engine: Literal["python", "numba", "concurrent.futures"],
+    workers: int | None = None,
+) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
+    return _calculate_distances(
+        things=things, distance=distance, engine=engine, workers=workers
+    )
 
-    if engine == "scipy":
-        if isinstance(things, np.ndarray) and len(things.shape) == 2:
-            if callable(distance) or isinstance(distance, str):
-                # len(things.shape) == 2 ensures T is ndarray
-                return squareform(
-                    pdist(
-                        things,
-                        cast(
-                            "Callable[[np.ndarray, np.ndarray], _FloatValue] | _MetricKind",
-                            distance,
-                        ),
-                    )
-                )
-            else:
-                raise ValueError("distance wrong for engine == 'scipy'")
-        else:
-            raise ValueError("things wrong")
 
-    elif engine == "python":
-        if isinstance(distance, str):
-            raise ValueError("distance wrong")
+def _calculate_distances(
+    things: Iterable[T] | AnySequence[T],
+    distance: Callable[[T, T], np.float64],
+    engine: Literal["python", "numba", "concurrent.futures"],
+    workers: int | None = None,
+) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
+    if isinstance(things, Iterator):
+        raise ValueError(
+            "`things` should be immutable on read, i.e. be an `Iterable` and not `Iterator`"
+        )
+    if workers is not None and engine in ["python", "numba"]:
+        raise ValueError("`workers` is an option for engine='concurrent.futures'")
+
+    if not callable(distance):
+        raise ValueError("distance must be a callable")
+
+    if engine == "python":
+        if not isinstance(things, Iterable):
+            raise ValueError("`things` must be a `Iterable` for engine == 'python'")
         return get_distance_matrix(things, distance)
 
+    elif engine == "concurrent.futures":
+        if not isinstance(things, AnySequence):
+            raise ValueError(
+                "`things` must be a `Sequence` for engine == 'concurrent.futures'"
+            )
+        return get_distance_matrix_parallel(things, distance, workers)
+
     elif engine == "numba":
-        if isinstance(distance, str):
-            raise ValueError("distance wrong")
         import numba
 
-        return numba.jit(get_distance_matrix)(things, distance)  # type: ignore
+        return numba.jit(get_distance_matrix_numba)(things, distance)  # type: ignore
 
-    raise ValueError("engine wrong")
+    raise ValueError("engine isnt in the list of allowed ones, consult the type hints")
 
 
 @overload
-def run(
-    things: Collection[T],
-    distance: Callable[[T, T], _FloatValue],
-    labels: np.ndarray[np.str_ | np.int_, Any],
-    engine: Literal["python", "numba"],
+def permanova_pipeline(
+    things: Iterable[T],
+    distance: Callable[[T, T], np.float64],
+    labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
+    engine: Literal["python"],
+    already_squared=False,
 ) -> PermanovaResults:
     ...
 
 
 @overload
-def run(
-    things: np.ndarray[Any, Any],
-    distance: _MetricKind,
-    labels: np.ndarray[np.str_ | np.int_, Any],
-    engine: Literal["scipy"],
+def permanova_pipeline(
+    things: AnySequence[T],
+    distance: Callable[[T, T], np.float64],
+    labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
+    engine: Literal["concurrent.futures", "numba"],
+    already_squared=False,
 ) -> PermanovaResults:
     ...
 
 
-def run(
-    things: Collection[T],
-    distance: Callable[[T, T], _FloatValue] | _MetricKind,
-    labels: np.ndarray[np.str_ | np.int_, Any],
-    engine: Literal["scipy", "python", "numba"],
+def permanova_pipeline(
+    things: Iterable[T] | AnySequence[T],
+    distance: Callable[[T, T], np.float64],
+    labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
+    engine: Literal["python", "numba", "concurrent.futures"],
+    already_squared=False,
+    workers: int | None = None,
 ) -> PermanovaResults:
-    if labels.dtype is np.dtype("str"):
-        fastlabels = ordinal_encoding(cast("np.ndarray[np.str_, Any]", labels))
+    if (
+        labels.dtype.kind in ["i", "u"]
+        and min(labels) == 0
+        and max(labels) == len(np.unique(labels)) - 1
+    ):
+        fastlabels = labels.astype(np.uint, copy=False)  # if possible, dont copy
     else:
-        if not (min(labels) == 0 and max(labels) == len(np.unique(labels)) - 1):
-            raise ValueError(
-                "in case of integer array it must be an ordinal encoding"
-            )  # TODO: do ordinal encoding regardless of type
-        fastlabels = cast("np.ndarray[np.uint, Any]", labels)
-    dist = calculate_distances(things, distance, engine)
-    return PermanovaResults(*permanova(dist**2, fastlabels))
+        fastlabels = ordinal_encoding(labels)
+    dist = _calculate_distances(things, distance, engine, workers)
+    if not already_squared:
+        dist **= 2
+    return PermanovaResults(*permanova(dist, fastlabels))
