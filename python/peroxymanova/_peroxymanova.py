@@ -27,8 +27,12 @@ def ordinal_encoding(
 ) -> np.ndarray[Any, np.dtype[np.uint]]:
     if not isinstance(arr, np.ndarray):
         raise TypeError("input should be a `np.ndarray`")
+    if arr.dtype.name.startswith(("str", "bytes", "void")):
+        suffix = "".join(x for x in arr.dtype.name if x.isalpha())
+    else:
+        suffix = arr.dtype.name
     try:
-        func = getattr(_oxide, f"ordinal_encoding_{arr.dtype.name}")
+        func = getattr(_oxide, f"ordinal_encoding_{suffix}")
     except NameError:
         raise TypeError(f"input dtype {arr.dtype} not understood")
     return func(arr)
@@ -88,11 +92,24 @@ def get_distance_matrix(things: Iterable[T], distance: Callable[[T, T], np.float
     return np.array(dists)
 
 
+def get_distance_matrix_numba(
+    things: AnySequence[T], distance: Callable[[T, T], np.float64]
+):
+    dists = np.empty((len(things), len(things)), dtype=np.float64)
+    for i in range(len(things)):
+        for j in range(len(things)):
+            if i == j:
+                dists[j, i] = 0.0
+            else:
+                dists[j, i] = distance(things[i], things[j])
+    return dists
+
+
 @overload
 def calculate_distances(
     things: Iterable[T],
     distance: Callable[[T, T], np.float64],
-    engine: Literal["python", "numba"],
+    engine: Literal["python"],
 ) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
     ...
 
@@ -101,7 +118,7 @@ def calculate_distances(
 def calculate_distances(
     things: AnySequence[T],
     distance: Callable[[T, T], np.float64],
-    engine: Literal["concurrent.futures"],
+    engine: Literal["concurrent.futures", "numba"],
     workers: int,
 ) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
     ...
@@ -141,7 +158,6 @@ def _calculate_distances(
 
     elif engine == "concurrent.futures":
         if not isinstance(things, AnySequence):
-            # TODO: support Iterable, since each worker is chopping off a head from the Iterable of things and then iterates through all the Iterable again
             raise ValueError(
                 "`things` must be a `Sequence` for engine == 'concurrent.futures'"
             )
@@ -150,7 +166,7 @@ def _calculate_distances(
     elif engine == "numba":
         import numba
 
-        return numba.jit(get_distance_matrix)(things, distance)  # type: ignore
+        return numba.jit(get_distance_matrix_numba)(things, distance)  # type: ignore
 
     raise ValueError("engine isnt in the list of allowed ones, consult the type hints")
 
@@ -160,7 +176,7 @@ def run(
     things: Iterable[T],
     distance: Callable[[T, T], np.float64],
     labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
-    engine: Literal["python", "numba"],
+    engine: Literal["python"],
     already_squared=False,
 ) -> PermanovaResults:
     ...
@@ -171,7 +187,7 @@ def run(
     things: AnySequence[T],
     distance: Callable[[T, T], np.float64],
     labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
-    engine: Literal["concurrent.futures"],
+    engine: Literal["concurrent.futures", "numba"],
     already_squared=False,
 ) -> PermanovaResults:
     ...
