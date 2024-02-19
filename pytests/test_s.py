@@ -1,15 +1,18 @@
 from __future__ import annotations
-from typing import Any, Generic, TypeVar, Iterator
+from typing import Any, Generic, TypeVar
 from reference import square
 import peroxymanova
 import numpy as np
 from scipy.spatial import distance_matrix
 from scipy.stats import f_oneway
+import pytest
+import numba
 
 size = 10
 objects = np.random.random((size, 1))
 dist: np.ndarray[Any, np.dtype[np.float64]] = distance_matrix(objects, objects)
 labels = np.random.randint(0, 2, size)
+anova = f_oneway(*(objects[labels == i] for i in np.unique(labels)))
 
 T = TypeVar("T", covariant=True)
 
@@ -29,25 +32,38 @@ class MockDataLoaderIndexable(Generic[T]):
         return len(self.arr)
 
 
-def test_it():
-    python = square.permanova(dist**2, labels.copy())
+def test_permanova():
     our = peroxymanova.permanova(dist**2, labels.astype(np.uint))
-    anova = f_oneway(*(objects[labels == i] for i in np.unique(labels)))
-    run_py_results = peroxymanova.run(objects, distance_function, labels, "python")
-    run_mp_np_results = peroxymanova.run(
-        objects,
-        distance_function,
-        labels,
-        "concurrent.futures",
+    assert np.allclose(anova.statistic[0], our[0])
+
+
+@pytest.mark.parametrize("labeltype", [np.int16, np.int64, np.str_])
+@pytest.mark.parametrize("engine", ["python", "numba"])
+def test_run_iterable(engine, labeltype):
+    if engine == "numba":
+        local_distance_function = numba.njit(distance_function)
+    else:
+        local_distance_function = distance_function
+    run_py_results = peroxymanova.run(
+        objects, local_distance_function, labels.astype(labeltype), engine=engine
     )
-    run_mp_results = peroxymanova.run(
+    assert np.allclose(anova.statistic[0], run_py_results.statistic)
+
+
+@pytest.mark.parametrize("labeltype", [np.int16, np.int64])
+def test_run_ordinal_encoding_on_ints(labeltype):
+    run_py_results = peroxymanova.run(
+        objects, distance_function, labels.astype(labeltype) + 42, engine="python"
+    )
+    assert np.allclose(anova.statistic[0], run_py_results.statistic)
+
+
+@pytest.mark.parametrize("labeltype", [np.int16, np.int64, np.str_])
+def test_run_indexable(labeltype):
+    run_py_results = peroxymanova.run(
         MockDataLoaderIndexable(objects),
         distance_function,
-        labels,
-        "concurrent.futures",
+        labels.astype(labeltype),
+        engine="concurrent.futures",
     )
-
-    assert np.allclose(anova.statistic[0], our[0])
     assert np.allclose(anova.statistic[0], run_py_results.statistic)
-    assert np.allclose(anova.statistic[0], run_mp_np_results.statistic)
-    assert np.allclose(anova.statistic[0], run_mp_results.statistic)
