@@ -166,7 +166,7 @@ def _calculate_distances(
     elif engine == "numba":
         import numba
 
-        return numba.jit(get_distance_matrix_numba)(things, distance)  # type: ignore
+        return numba.njit(get_distance_matrix_numba)(things, numba.njit(distance))  # type: ignore
 
     raise ValueError("engine isnt in the list of allowed ones, consult the type hints")
 
@@ -198,9 +198,68 @@ def permanova_pipeline(
     distance: Callable[[T, T], np.float64],
     labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
     engine: Literal["python", "numba", "concurrent.futures"],
+    symmetrification: Literal["roundtrip", "one-sided"],
     already_squared=False,
     workers: int | None = None,
 ) -> PermanovaResults:
+    """
+    ### Run the full pipeline:
+    1. Compute pairwise distances between `things` and resolve inconsistencies*
+    2. Perform ordinal encoding of lables for the `peroxymanova.permanova`
+    3. Run highly optimized compiled `peroxymanova.permanova`*
+
+    ### Notes:
+    - "inconsistencies" in the pairwise distances refer to the fact that the
+    properties of symmetry (i.e. `distance(a, b) == distance(b, a)`)
+    and zero distance to self (i.e. `distance(a, a) == 0`) dont necessarily hold
+    an arbitrary user-defined function `distance(a, b)`, and those are important for metrics.
+    While violating zero distance to self happens to not affect one-way permutational anova,
+    violating symmetry does affect it, so `symmetrification` parameter controls how it is achieved.
+    - the result of running permanova is the p-value for the
+    hypothesis that different groups of `things` (encoded in `labels`)
+    are identical, as far as the `distance` metric is concerned.
+    Hence, it can be interpreted in the same way a p-value for anova is interpreted.
+    - The key difference between permanova and anova is that this algorithm only requires
+    a `distance` to be defined, while anova needs all operators on numbers (like addition
+    and division and whatnot)
+
+    ## Parameters:
+    for the types please consult the type annotations
+
+    things: a set of (any) things of some type `T` to run permanova for
+
+    labels: an array of labels of the same length as `things`
+    (even if `__len__` is not defined for `things`, there must be a correspondence by order)
+
+    distance: a function that accepts two objects of type `T` and returns
+    a float "distance" between them. This can be anything, really,
+    but the closer it is in spirit to the Eucledian (L2) distance, the better
+    (but then again, if an honest Eucledian distance can actually be defined,
+    then `T` is just some kind of number and you should use anova from scipy)
+
+    engine: the engine that will calculate the distance matrix
+    - python: the most flexible one, only requires `things` to have `__iter__` method.
+    It is implied that iterating over `things` doesnt mutate them.
+    - numba: uses numba's just-in-time compilation to calculate the distance matrix faster,
+    but requires `things` to have `__getitem__` method and be numba-friendly,
+    along with the `distance` function. If you arent sure if your objects are numba-friendly,
+    prepare for numba errors.
+    - concurrent.futures: uses concurrent.futures to run the distance computation in parallel,
+    requires `things` to have `__getitem__` method. This can be used for relatively fast computation
+    of potentially large objects, as the `things` can be a lazy dataset that loads huge things
+    with its `__getitem__`.
+
+    symmetrification: a strategy for ensuring symmetric distance matrix
+    - roundtrip: each `distance(a, b)` is summed with its counterpart `distance(b, a)`
+    - one-sided: only compute one `distance(a, b)`
+    for `a` and `b` such that `a` comes before `b` in the `things`
+
+    already_squared: permanova algorithm requires distances to be squared,
+    but for speed one can provide a `distance` function that returns a squared result
+    (it makes sense if `distance` was supposed to take a square root)
+
+    workers: amount of workers for concurrent.futures, only makes sense for that engine
+    """
     if (
         labels.dtype.kind in ["i", "u"]
         and min(labels) == 0
