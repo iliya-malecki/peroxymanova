@@ -27,6 +27,10 @@ Tc = TypeVar("Tc", covariant=True)
 def ordinal_encoding(
     arr: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
 ) -> np.ndarray[Any, np.dtype[np.uint]]:
+    '''
+    An implementation of normal ordinal encoding in rust to shed some dependencies.
+    Only works with certain types!
+    '''
     if not isinstance(arr, np.ndarray):
         raise TypeError("input should be a `np.ndarray`")
     if arr.dtype.name.startswith(("str", "bytes", "void")):
