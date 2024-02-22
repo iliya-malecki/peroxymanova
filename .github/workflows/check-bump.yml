@@ -30,7 +30,7 @@ jobs:
           if [ -n "$new_version" ]; then
             echo "New version detected"
           else
-            echo "::error file=pyproject.toml::No new version! Are you sure you want to merge?"
+            echo "::warning file=pyproject.toml::No new version! Are you sure you want to merge?"
           fi
 
         env:
