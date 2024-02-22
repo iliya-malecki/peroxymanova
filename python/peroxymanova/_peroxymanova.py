@@ -83,11 +83,11 @@ def calculate_distances(
     symmetrification: Literal["roundtrip", "one-sided"],
     workers: int | None = None,
 ) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
-    '''
+    """
     Compute distances between `things`. Primarily used in `peroxymanova.run`
     but exposed here for edge cases when `run` is inconvenient. For parameter
     explanation see `peroxymanova.run` docs.
-    '''
+    """
     return _calculate_distances(
         things=things,
         distance=distance,
@@ -146,6 +146,7 @@ def permanova_pipeline(
     engine: Literal["python"],
     symmetrification: Literal["roundtrip", "one-sided"],
     already_squared=False,
+    permutations=1000,
 ) -> PermanovaResults:
     ...
 
@@ -158,6 +159,7 @@ def permanova_pipeline(
     engine: Literal["numba"],
     symmetrification: Literal["roundtrip", "one-sided"],
     already_squared=False,
+    permutations=1000,
 ) -> PermanovaResults:
     ...
 
@@ -170,6 +172,7 @@ def permanova_pipeline(
     engine: Literal["concurrent.futures"],
     symmetrification: Literal["roundtrip", "one-sided"],
     already_squared=False,
+    permutations=1000,
     workers: int | None = None,
 ) -> PermanovaResults:
     ...
@@ -182,6 +185,7 @@ def permanova_pipeline(
     engine: Literal["python", "numba", "concurrent.futures"],
     symmetrification: Literal["roundtrip", "one-sided"],
     already_squared=False,
+    permutations=1000,
     workers: int | None = None,
 ) -> PermanovaResults:
     """
@@ -253,4 +257,4 @@ def permanova_pipeline(
     dist = _calculate_distances(things, distance, engine, symmetrification, workers)
     if not already_squared:
         dist **= 2
-    return PermanovaResults(*permanova(dist, fastlabels))
+    return PermanovaResults(*permanova(dist, fastlabels, permutations))

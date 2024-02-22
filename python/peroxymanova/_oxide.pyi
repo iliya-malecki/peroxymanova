@@ -4,6 +4,7 @@ from typing import Any
 def permanova(
     sqdistances: np.ndarray[Any, np.dtype[np.float64]],
     labels: np.ndarray[Any, np.dtype[np.uint]],
+    permutations=1000,
 ) -> tuple[float, float]:
     """
     Run a highly optimized permanova implementation written in rust and compiled for your architecture.
