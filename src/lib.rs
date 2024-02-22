@@ -44,7 +44,11 @@ fn get_f(ss_t: f64, ss_w: f64, a: u64, n: u64) -> f64 {
 }
 
 // Vec<usize> is used since we have to consume it due to the shuffling, no use asking for views
-pub fn _permanova(sqdistances: &ArrayView2<f64>, mut labels: Vec<usize>) -> (f64, f64) {
+pub fn _permanova(
+    sqdistances: &ArrayView2<f64>,
+    mut labels: Vec<usize>,
+    permutations: usize,
+) -> (f64, f64) {
     let max_label = *(labels.iter().max().unwrap());
     let bincount: Vec<i64> = (0..=max_label)
         .into_iter()
@@ -56,7 +60,7 @@ pub fn _permanova(sqdistances: &ArrayView2<f64>, mut labels: Vec<usize>) -> (f64
 
     let mut other_fs: Vec<f64> = Vec::new();
     let mut rng = rand::thread_rng();
-    for _ in 0..1000 {
+    for _ in 0..permutations {
         labels.shuffle(&mut rng);
         other_fs.push(get_f(
             ss_t,
@@ -90,8 +94,12 @@ pub fn generate_data(size: usize, category_count: usize) -> (Array2<f64>, Vec<us
 }
 
 #[pyfunction]
-pub fn permanova(sqdistances: PyReadonlyArray<f64, Ix2>, labels: Vec<usize>) -> (f64, f64) {
-    return _permanova(&sqdistances.as_array(), labels);
+pub fn permanova(
+    sqdistances: PyReadonlyArray<f64, Ix2>,
+    labels: Vec<usize>,
+    permutations: Option<usize>,
+) -> (f64, f64) {
+    return _permanova(&sqdistances.as_array(), labels, permutations.unwrap_or(1000));
 }
 
 pub fn ordinal_encoding<T: Eq + Hash + Clone>(labels: Vec<T>) -> Vec<usize> {
