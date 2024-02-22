@@ -59,9 +59,17 @@ def calculate_distances(
 def calculate_distances(
     things: AnySequence[T],
     distance: Callable[[T, T], np.float64],
-    engine: Literal[
-        "concurrent.futures", "numba"
-    ],  # TODO: numba has nothing to do with workers
+    engine: Literal["numba"],
+    symmetrification: Literal["roundtrip", "one-sided"],
+) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
+    ...
+
+
+@overload
+def calculate_distances(
+    things: AnySequence[T],
+    distance: Callable[[T, T], np.float64],
+    engine: Literal["concurrent.futures",],
     symmetrification: Literal["roundtrip", "one-sided"],
     workers: int,
 ) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
@@ -142,9 +150,23 @@ def permanova_pipeline(
     things: AnySequence[T],
     distance: Callable[[T, T], np.float64],
     labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
-    engine: Literal["concurrent.futures", "numba"],
+    engine: Literal["numba"],
     symmetrification: Literal["roundtrip", "one-sided"],
     already_squared=False,
+) -> PermanovaResults:
+    ...
+
+
+@overload
+def permanova_pipeline(
+    things: AnySequence[T],
+    distance: Callable[[T, T], np.float64],
+    labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
+    engine: Literal["concurrent.futures"],
+    symmetrification: Literal["roundtrip", "one-sided"],
+    already_squared=False,
+    *,
+    workers: int,
 ) -> PermanovaResults:
     ...
 

@@ -6,7 +6,6 @@ import numpy as np
 from scipy.spatial import distance_matrix
 from scipy.stats import f_oneway
 import pytest
-import numba
 
 size = 100
 objects = np.random.random((size, 1))
