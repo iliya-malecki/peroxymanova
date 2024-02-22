@@ -39,13 +39,14 @@ def test_permanova():
 
 @pytest.mark.parametrize("labeltype", [np.int16, np.int64, np.str_])
 @pytest.mark.parametrize("engine", ["python", "numba"])
-def test_run_iterable(engine, labeltype):
-    if engine == "numba":
-        local_distance_function = numba.njit(distance_function)
-    else:
-        local_distance_function = distance_function
+@pytest.mark.parametrize("symmetrification", ["roundtrip", "one-sided"])
+def test_run_iterable(labeltype, engine, symmetrification):
     run_py_results = peroxymanova.permanova_pipeline(
-        objects, local_distance_function, labels.astype(labeltype), engine=engine
+        objects,
+        distance_function,
+        labels.astype(labeltype),
+        engine=engine,
+        symmetrification=symmetrification,
     )
     assert np.allclose(anova.statistic[0], run_py_results.statistic)
 
@@ -53,17 +54,23 @@ def test_run_iterable(engine, labeltype):
 @pytest.mark.parametrize("labeltype", [np.int16, np.int64])
 def test_run_ordinal_encoding_on_ints(labeltype):
     run_py_results = peroxymanova.permanova_pipeline(
-        objects, distance_function, labels.astype(labeltype) + 42, engine="python"
+        objects,
+        distance_function,
+        labels.astype(labeltype) + 42,
+        engine="python",
+        symmetrification="roundtrip",
     )
     assert np.allclose(anova.statistic[0], run_py_results.statistic)
 
 
 @pytest.mark.parametrize("labeltype", [np.int16, np.int64, np.str_])
-def test_run_indexable(labeltype):
+@pytest.mark.parametrize("symmetrification", ["roundtrip", "one-sided"])
+def test_run_indexable(labeltype, symmetrification):
     run_py_results = peroxymanova.permanova_pipeline(
         MockDataLoaderIndexable(objects),
         distance_function,
         labels.astype(labeltype),
         engine="concurrent.futures",
+        symmetrification=symmetrification
     )
     assert np.allclose(anova.statistic[0], run_py_results.statistic)

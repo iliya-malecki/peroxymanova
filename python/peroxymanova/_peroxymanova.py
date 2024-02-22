@@ -1,21 +1,23 @@
 from __future__ import annotations
 from typing import (
+    NamedTuple,
     TypeVar,
-    Protocol,
     Iterator,
     Iterable,
     Callable,
     Literal,
     Any,
-    runtime_checkable,
     overload,
 )
-from ._oxide import permanova
 from . import _oxide
+from ._oxide import permanova
+from .types import AnySequence
+from .distance import (
+    get_distance_matrix,
+    get_distance_matrix_numba,
+    get_distance_matrix_parallel,
+)
 import numpy as np
-from typing import NamedTuple
-from concurrent.futures import ProcessPoolExecutor
-from functools import partial
 
 
 T = TypeVar("T")
@@ -43,73 +45,12 @@ class PermanovaResults(NamedTuple):
     pvalue: float
 
 
-@runtime_checkable
-class AnySequence(Protocol[Tc]):
-    def __getitem__(self, __key: int) -> Tc:
-        ...
-
-    def __len__(self) -> int:
-        ...
-
-
-def _access_helper(
-    i: int, distance: Callable[[T, T], np.float64], things: AnySequence[T]
-):
-    """
-    used for retrieving the `things` elements one by one
-    regardless of how the tasks were sent to the worker,
-    since the tasks are just ints
-    """
-    thing = things[i]  # run __getitem__ once on the worker
-    return [distance(thing, things[j]) if i != j else 0.0 for j in range(len(things))]
-
-
-def get_distance_matrix_parallel(
-    things: AnySequence[T], distance: Callable[[T, T], np.float64], workers: int | None
-):
-    with ProcessPoolExecutor(max_workers=workers) as ppe:
-        return np.array(
-            list(
-                ppe.map(
-                    partial(_access_helper, distance=distance, things=things),
-                    range(len(things)),
-                )
-            ),
-            dtype=np.float64,
-        )
-
-
-def get_distance_matrix(things: Iterable[T], distance: Callable[[T, T], np.float64]):
-    dists = []
-    for i, a in enumerate(things):
-        row = []
-        for j, b in enumerate(things):
-            if i == j:
-                row.append(0.0)
-            else:
-                row.append(distance(a, b))
-        dists.append(row)
-    return np.array(dists)
-
-
-def get_distance_matrix_numba(
-    things: AnySequence[T], distance: Callable[[T, T], np.float64]
-):
-    dists = np.empty((len(things), len(things)), dtype=np.float64)
-    for i in range(len(things)):
-        for j in range(len(things)):
-            if i == j:
-                dists[j, i] = 0.0
-            else:
-                dists[j, i] = distance(things[i], things[j])
-    return dists
-
-
 @overload
 def calculate_distances(
     things: Iterable[T],
     distance: Callable[[T, T], np.float64],
     engine: Literal["python"],
+    symmetrification: Literal["roundtrip", "one-sided"],
 ) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
     ...
 
@@ -118,7 +59,10 @@ def calculate_distances(
 def calculate_distances(
     things: AnySequence[T],
     distance: Callable[[T, T], np.float64],
-    engine: Literal["concurrent.futures", "numba"],
+    engine: Literal[
+        "concurrent.futures", "numba"
+    ],  # TODO: numba has nothing to do with workers
+    symmetrification: Literal["roundtrip", "one-sided"],
     workers: int,
 ) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
     ...
@@ -128,10 +72,15 @@ def calculate_distances(
     things: Iterable[T] | AnySequence[T],
     distance: Callable[[T, T], np.float64],
     engine: Literal["python", "numba", "concurrent.futures"],
+    symmetrification: Literal["roundtrip", "one-sided"],
     workers: int | None = None,
 ) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
     return _calculate_distances(
-        things=things, distance=distance, engine=engine, workers=workers
+        things=things,
+        distance=distance,
+        engine=engine,
+        symmetrification=symmetrification,
+        workers=workers,
     )
 
 
@@ -139,6 +88,7 @@ def _calculate_distances(
     things: Iterable[T] | AnySequence[T],
     distance: Callable[[T, T], np.float64],
     engine: Literal["python", "numba", "concurrent.futures"],
+    symmetrification: Literal["roundtrip", "one-sided"],
     workers: int | None = None,
 ) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
     if isinstance(things, Iterator):
@@ -154,19 +104,23 @@ def _calculate_distances(
     if engine == "python":
         if not isinstance(things, Iterable):
             raise ValueError("`things` must be a `Iterable` for engine == 'python'")
-        return get_distance_matrix(things, distance)
+        return get_distance_matrix(things, distance, symmetrification)
 
     elif engine == "concurrent.futures":
         if not isinstance(things, AnySequence):
             raise ValueError(
                 "`things` must be a `Sequence` for engine == 'concurrent.futures'"
             )
-        return get_distance_matrix_parallel(things, distance, workers)
+        return get_distance_matrix_parallel(things, distance, symmetrification, workers)
 
     elif engine == "numba":
         import numba
 
-        return numba.njit(get_distance_matrix_numba)(things, numba.njit(distance))  # type: ignore
+        return numba.njit(get_distance_matrix_numba)(
+            things,
+            numba.njit(distance),  # type: ignore
+            symmetrification,
+        )  # type: ignore
 
     raise ValueError("engine isnt in the list of allowed ones, consult the type hints")
 
@@ -177,6 +131,7 @@ def permanova_pipeline(
     distance: Callable[[T, T], np.float64],
     labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
     engine: Literal["python"],
+    symmetrification: Literal["roundtrip", "one-sided"],
     already_squared=False,
 ) -> PermanovaResults:
     ...
@@ -188,6 +143,7 @@ def permanova_pipeline(
     distance: Callable[[T, T], np.float64],
     labels: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
     engine: Literal["concurrent.futures", "numba"],
+    symmetrification: Literal["roundtrip", "one-sided"],
     already_squared=False,
 ) -> PermanovaResults:
     ...
@@ -268,7 +224,7 @@ def permanova_pipeline(
         fastlabels = labels.astype(np.uint, copy=False)  # if possible, dont copy
     else:
         fastlabels = ordinal_encoding(labels)
-    dist = _calculate_distances(things, distance, engine, workers)
+    dist = _calculate_distances(things, distance, engine, symmetrification, workers)
     if not already_squared:
         dist **= 2
     return PermanovaResults(*permanova(dist, fastlabels))
