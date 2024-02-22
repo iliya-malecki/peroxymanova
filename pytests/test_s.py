@@ -17,7 +17,7 @@ T = TypeVar("T", covariant=True)
 
 
 def distance_function(a: np.float64, b: np.float64):
-    return np.sqrt(np.sum((a - b) ** 2))
+    return np.float64(np.sqrt(np.sum((a - b) ** 2)))
 
 
 class MockDataLoaderIndexable(Generic[T]):
@@ -70,6 +70,6 @@ def test_run_indexable(labeltype, symmetrification):
         distance_function,
         labels.astype(labeltype),
         engine="concurrent.futures",
-        symmetrification=symmetrification
+        symmetrification=symmetrification,
     )
     assert np.allclose(anova.statistic[0], run_py_results.statistic)

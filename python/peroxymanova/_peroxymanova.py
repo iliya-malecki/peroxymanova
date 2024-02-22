@@ -165,8 +165,7 @@ def permanova_pipeline(
     engine: Literal["concurrent.futures"],
     symmetrification: Literal["roundtrip", "one-sided"],
     already_squared=False,
-    *,
-    workers: int,
+    workers: int | None = None,
 ) -> PermanovaResults:
     ...
 
