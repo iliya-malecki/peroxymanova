@@ -83,6 +83,11 @@ def calculate_distances(
     symmetrification: Literal["roundtrip", "one-sided"],
     workers: int | None = None,
 ) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
+    '''
+    Compute distances between `things`. Primarily used in `peroxymanova.run`
+    but exposed here for edge cases when `run` is inconvenient. For parameter
+    explanation see `peroxymanova.run` docs.
+    '''
     return _calculate_distances(
         things=things,
         distance=distance,
@@ -214,20 +219,20 @@ def permanova_pipeline(
     labels: an array of labels of the same length as `things`\
     (even if `__len__` is not defined for `things`, there must be a correspondence by order)
 
-    engine: the engine that will calculate the distance matrix\
+    engine: the engine that will calculate the distance matrix:
     - python: the most flexible one, only requires `things` to have `__iter__` method.\
-    It is implied that iterating over `things` doesnt mutate them.\
+    It is implied that iterating over `things` doesnt mutate them.
     - numba: uses numba's just-in-time compilation to calculate the distance matrix faster,\
     but requires `things` to have `__getitem__` method and be numba-friendly,\
     along with the `distance` function. If you arent sure if your objects are numba-friendly,\
-    prepare for numba errors.\
+    prepare for numba errors.
     - concurrent.futures: uses concurrent.futures to run the distance computation in parallel,\
     requires `things` to have `__getitem__` method. This can be used for relatively fast computation\
     of potentially large objects, as the `things` can be a lazy dataset that loads huge things\
     with its `__getitem__`.
 
-    symmetrification: a strategy for ensuring symmetric distance matrix\
-    - roundtrip: each `distance(a, b)` is summed with its counterpart `distance(b, a)`\
+    symmetrification: a strategy for ensuring symmetric distance matrix
+    - roundtrip: each `distance(a, b)` is summed with its counterpart `distance(b, a)`
     - one-sided: only compute one `distance(a, b)`\
     for `a` and `b` such that `a` comes before `b` in the `things`
 
