@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Callable, TypeVar, Literal, Iterable
 from .types import AnySequence
 import numpy as np

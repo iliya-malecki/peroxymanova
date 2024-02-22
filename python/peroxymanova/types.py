@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import runtime_checkable, Protocol, TypeVar
 
 Tc = TypeVar("Tc", covariant=True)
