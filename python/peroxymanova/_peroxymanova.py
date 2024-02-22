@@ -194,7 +194,7 @@ def permanova_pipeline(
     2. Perform ordinal encoding of lables for the `peroxymanova.permanova`
     3. Run highly optimized compiled `peroxymanova.permanova`*
 
-    ### Notes:
+    ### Notes
     - "inconsistencies" in the pairwise distances refer to the fact that the
     properties of symmetry (i.e. `distance(a, b) == distance(b, a)`)
     and zero distance to self (i.e. `distance(a, a) == 0`) dont necessarily hold
@@ -209,7 +209,7 @@ def permanova_pipeline(
     a `distance` to be defined, while anova needs all operators on numbers (like addition
     and division and whatnot)
 
-    ## Parameters:
+    ### Parameters
     for the types please consult the type annotations
 
     things: a set of (any) things of some type `T` to run permanova for
@@ -244,7 +244,19 @@ def permanova_pipeline(
     but for speed one can provide a `distance` function that returns a squared result\
     (it makes sense if `distance` was supposed to take a square root)
 
+    permutations: amount of permutations for calculating p-value in the core algorithm
+
     workers: amount of workers for concurrent.futures, only makes sense for that engine
+
+    ### Returns
+    PermanovaResults(statistic: np.float64, pvalue: np.float64)
+    `statistic` is a deterministic number that represents how
+    extreme the difference between groups is. It is kind of impossible to interpret
+    but its useful to compare different runs on the same data.
+    `pvalue` is a permutation-based approximation of the
+    probability that the null hypothesis should be accepted. Since the null hypothesis here
+    is that there is no difference between groups, a low p-value (typically below 0.05)
+    means that groups are likely different.
     """
     if (
         labels.dtype.kind in ["i", "u"]
