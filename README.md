@@ -15,3 +15,15 @@ Strategic roadmap:
 - Make a fancy parallelization backend interface for computing pairwise distances. Maybe there could be a backend='ray' that would actually search for a full ray cluster?
 - Since we dream of ray, should we get a cluster for rust side as well? :)
 
+## Development
+### Releasing
+
+Since were using pyproject.toml, the source of truth for the version is the file,
+and the version tag is based on the `project.version` attribute. It means
+bumping the version necessitates a separate commit.
+At least there is a way to ensure the version tag consistency with the version
+attribute in the file. Use:
+```bash
+git config --local include.path ../.gitconfig
+```
+to add the repos' .gitconfig with an ugly but nifty "git bump" alias

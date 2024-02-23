@@ -1,0 +1,2 @@
+[alias]
+	bump = "!bash -c 'if [ \"$(git rev-parse --abbrev-ref HEAD)\" != \"main\" ]; then echo \"Error: main isnt checked out\"; exit 1; fi; if [ \"$(git status --porcelain)\" ]; then echo \"Error: there are pending changes, commit them to proceed\"; exit 1; fi; if [ ! -f pyproject.toml ]; then echo \"Error: cant extract a version from pyproject.toml: file not found\"; exit 1; fi; version=$(grep -Po \"(?<=^version = \\\")\\d+\\.\\d+\\.\\d+(?=\\\"$)\" pyproject.toml); echo \"tagging v$version\"; git tag \"v$version\"'"
