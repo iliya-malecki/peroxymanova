@@ -4,7 +4,10 @@ build-backend = "maturin"
 
 [project]
 name = "peroxymanova"
-version = "0.3.0"
+description = "'ANOVA supercharged' supercharged"
+license = { file = "LICENSE.txt" }
+readme = "README.md"
+version = "0.3.1"
 requires-python = ">=3.8,<3.13"
 dependencies = [
     "numpy>=1.15,<1.27",
