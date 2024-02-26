@@ -76,7 +76,6 @@ def get_distance_matrix(
         dists.append(row)
     ret = np.array(dists)
     ret += ret.T
-    print(ret)
     return ret
 
 
@@ -97,5 +96,4 @@ def get_distance_matrix_numba(
             else:
                 dists[j, i] = distance(things[i], things[j])
     dists += dists.T
-    print(dists)
     return dists

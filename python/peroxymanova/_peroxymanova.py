@@ -27,10 +27,10 @@ Tc = TypeVar("Tc", covariant=True)
 def ordinal_encoding(
     arr: np.ndarray[Any, np.dtype[_oxide.ordinal_encoding_dtypes]],
 ) -> np.ndarray[Any, np.dtype[np.uint]]:
-    '''
+    """
     An implementation of normal ordinal encoding in rust to shed some dependencies.
     Only works with certain types!
-    '''
+    """
     if not isinstance(arr, np.ndarray):
         raise TypeError("input should be a `np.ndarray`")
     if arr.dtype.name.startswith(("str", "bytes", "void")):
@@ -258,7 +258,7 @@ def permanova_pipeline(
     extreme the difference between groups is. It is kind of impossible to interpret
     but its useful to compare different runs on the same data.
     `pvalue` is a permutation-based approximation of the
-    probability that the null hypothesis should be accepted. Since the null hypothesis here
+    probability that the null hypothesis is true. Since the null hypothesis here
     is that there is no difference between groups, a low p-value (typically below 0.05)
     means that groups are likely different.
     """
