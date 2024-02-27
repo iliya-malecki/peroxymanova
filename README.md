@@ -2,6 +2,22 @@
 
 This package allows you to measure differences between groups of things, just like ANOVA (or have you heard of t-test? A/B testing?) - but without needing those things to be numbers! Instead, it wants you to provide a function to compare two objects, and does the rest.
 
+## Quickstart
+
+```bash
+pip install peroxymanova
+```
+And you're good to go!
+
+You can also install it from github directly, but that requires having Rust toolchain since it involves building from source. Since this is a small project, there is no release schedule and changes get released pretty much immediately, so there is no reason to install from github, building from source.
+
+```python
+from peroxymanova import permanova_pipeline
+permanova_pipeline(...) # open the suggestions and follow the types!
+```
+
+## Description
+
 This project is essentially an implementation of PERMANOVA ([wiki](https://en.wikipedia.org/wiki/Permutational_analysis_of_variance)) in Rust.
 
 PERMANOVA (Permutational Multivariate Analysis of Variance) is a method for comparing groups of mathematical objects, requiring only a dissimilarity matrix between them, as opposed to having a notion of an average, like the one used in classical ANOVA. This is incredibly useful, since it is massively easier to define a dissimilarity than a mean: there is no obvious "average graph", "average neural network" or an "average RL policy", but with a little bit of hand waving one can define distances, or dissimilarities between a pair of such entities.
