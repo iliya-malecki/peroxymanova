@@ -5,6 +5,7 @@ use numpy::{IntoPyArray, Ix2, PyArray1, PyReadonlyArray};
 use paste;
 use pyo3::prelude::*;
 use rand::seq::SliceRandom;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::hash::Hash;
 
@@ -46,29 +47,29 @@ fn get_f(ss_t: f64, ss_w: f64, a: u64, n: u64) -> f64 {
 // Vec<usize> is used since we have to consume it due to the shuffling, no use asking for views
 pub fn _permanova(
     sqdistances: &ArrayView2<f64>,
-    mut labels: Vec<usize>,
+    labels: Vec<usize>,
     permutations: usize,
 ) -> (f64, f64) {
     let max_label = *(labels.iter().max().unwrap());
     let bincount: Vec<i64> = (0..=max_label)
-        .into_iter()
         .map(|el| labels.iter().filter(|&x| *x == el).count() as i64)
         .collect();
     let ss_t = get_ss_t(&sqdistances);
     let ss_w = get_ss_w(&sqdistances, &labels, &bincount);
     let f = get_f(ss_t, ss_w, bincount.len() as u64, labels.len() as u64);
 
-    let mut other_fs: Vec<f64> = Vec::new();
-    let mut rng = rand::thread_rng();
-    for _ in 0..permutations {
-        labels.shuffle(&mut rng);
-        other_fs.push(get_f(
-            ss_t,
-            get_ss_w(&sqdistances, &labels, &bincount),
-            bincount.len() as u64,
-            labels.len() as u64,
-        ));
-    }
+    let other_fs: Vec<_> = (0..permutations)
+        .into_par_iter()
+        .map_with(labels, |labels, _| {
+            labels.shuffle(&mut rand::thread_rng());
+            get_f(
+                ss_t,
+                get_ss_w(&sqdistances, &labels, &bincount),
+                bincount.len() as u64,
+                labels.len() as u64,
+            )
+        })
+        .collect();
 
     return (
         f,
@@ -99,7 +100,11 @@ pub fn permanova(
     labels: Vec<usize>,
     permutations: Option<usize>,
 ) -> (f64, f64) {
-    return _permanova(&sqdistances.as_array(), labels, permutations.unwrap_or(1000));
+    return _permanova(
+        &sqdistances.as_array(),
+        labels,
+        permutations.unwrap_or(1000),
+    );
 }
 
 pub fn ordinal_encoding<T: Eq + Hash + Clone>(labels: Vec<T>) -> Vec<usize> {
