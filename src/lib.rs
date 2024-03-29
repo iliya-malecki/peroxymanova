@@ -147,3 +147,44 @@ fn _oxide(_py: Python, m: &PyModule) -> PyResult<()> {
     concrete_ordinal_encoding!(i16, "int16", m);
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{_permanova, ordinal_encoding};
+    use ndarray::array;
+
+    #[test]
+    fn _permanova_statistic_valid() {
+        let sqdistances = array![
+            [0., 4., 16., 36., 64.],
+            [4., 0., 4., 16., 36.],
+            [16., 4., 0., 4., 16.],
+            [36., 16., 4., 0., 4.],
+            [64., 36., 16., 4., 0.]
+        ];
+        let labels = vec![0, 1, 2, 0, 1];
+
+        let (statistic, _pvalue) = _permanova(&sqdistances.view(), labels, 10);
+        assert_eq!(statistic, 0.1111111111111111);
+    }
+    #[test]
+    fn _permanova_pvalue_approx_valid() {
+        let sqdistances = array![
+            [0., 4., 16., 36., 64.],
+            [4., 0., 4., 16., 36.],
+            [16., 4., 0., 4., 16.],
+            [36., 16., 4., 0., 4.],
+            [64., 36., 16., 4., 0.]
+        ];
+        let labels = vec![0, 1, 2, 0, 1];
+
+        let (_statistic, pvalue) = _permanova(&sqdistances.view(), labels, 10000);
+        assert!((0.92..0.95).contains(&pvalue));
+    }
+
+    #[test]
+    fn ordinal_encoding_valid() {
+        let labels = vec!["aa", "bb", "aa", "cc"];
+        assert_eq!(ordinal_encoding(labels), vec![0, 1, 0, 2]);
+    }
+}
