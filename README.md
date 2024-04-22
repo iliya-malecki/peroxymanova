@@ -48,7 +48,7 @@ Imagine you have two groups of strings you need to compare. Maybe they are satle
 
 ### Binary blob comparisons (or you like pushing tech too far)
 
-Imagine you have several sets of binary blobs. Maybe they are binary messages you were sharing with your friends Alice and Bob, and each set is, as you suspect, a repeated message. Run the PERMANOVA on the hamming distances between them to know fur sure! This is because in science everything with p-value < 0.05 is true, and otherwise false (that was a joke, please always remember the probability of falsely rejecting the null hypothesis is right there in the p-value).
+Imagine you have several sets of binary blobs. Maybe they are binary messages you were sharing with your friends Alice and Bob, and each set is, as you suspect, a repeated message. Run the PERMANOVA on the hamming distances between them to know fur sure! This is because in science everything with p-value < 0.05 is true, and otherwise false (that was a joke, please always remember the fraction of experiments that would lead to accepting the null hypothesis is right there in the p-value).
 
 
 ## Further reading
