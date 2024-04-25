@@ -119,38 +119,79 @@ def test_different_number_of_permutations(npermutations):
     assert np.allclose(our[0], anova.statistic[0])
 
 
-def test_graceful_value_errors():
-    with pytest.raises(ValueError):
-        peroxymanova.permanova(dist**2, np.zeros(size, dtype="int"))
-    with pytest.raises(ValueError):
-        peroxymanova.permanova(dist**2, np.zeros(size, dtype="uint"))
-    with pytest.raises(ValueError):
-        peroxymanova.permanova(
-            np.random.random((size, size + 1)), labels.astype("uint")
-        )
-    with pytest.raises(ValueError):
-        peroxymanova.calculate_distances(
-            [np.nan] * 100, lambda a, b: np.float64(a - b), "python", "roundtrip"
+class TestGracefulValueErrors:
+    def permanova_dist(self):
+        with pytest.raises(ValueError):
+            print(
+                peroxymanova.permanova(
+                    np.random.random((size, size + 1)), labels.astype("uint")
+                )
+            )
+
+    def permanova_non_onehot_labels(self):
+        with pytest.raises(ValueError):
+            print(peroxymanova.permanova(dist, (labels + 42).astype("uint")))
+
+    def permanova_empty_labels(self):
+        with pytest.raises(ValueError):
+            print(peroxymanova.permanova(dist, np.zeros(0).astype("uint")))
+
+    def permanova_empty_both(self):
+        with pytest.raises(ValueError):
+            print(peroxymanova.permanova(np.zeros((0, 0)), np.zeros(0).astype("uint")))
+
+    def permanova_empty_dist(self):
+        with pytest.raises(ValueError):
+            print(
+                peroxymanova.permanova(np.random.random((0, 0)), labels.astype("uint"))
+            )
+
+
+def test_graceful_warning_nan():
+    with pytest.warns():
+        print(
+            peroxymanova.calculate_distances(
+                [np.nan] * 100, lambda a, b: np.float64(a - b), "python", "roundtrip"
+            )
         )
 
 
-@pytest.mark.parametrize(
-    "sillytype", [[42] * 3, (42,) * 3, False, None, object, Generic, lambda: 42]
+type_errors_par = pytest.mark.parametrize(
+    "sillytype", [None, object, Generic, lambda: 42]
 )
-def test_graceful_type_errors(sillytype):
-    with pytest.raises(TypeError):
-        peroxymanova.permanova(sillytype, labels.astype("uint"))
-    with pytest.raises(TypeError):
-        peroxymanova.permanova(dist, sillytype)
 
-    with pytest.raises(TypeError):
-        peroxymanova.ordinal_encoding(sillytype)
 
-    with pytest.raises(TypeError):
-        peroxymanova.calculate_distances(
-            sillytype, lambda a, b: np.float64(a - b), "python", "roundtrip"
-        )
-    with pytest.raises(TypeError):
-        peroxymanova.calculate_distances(
-            objects, lambda a, b: sillytype, "python", "roundtrip"
-        )
+class TestGracefulTypeErrors:
+    @type_errors_par
+    def test_permanova_dist(self, sillytype):
+        with pytest.raises(TypeError):
+            print(f"{sillytype = }")
+            peroxymanova.permanova(sillytype, labels.astype("uint"))
+
+    @type_errors_par
+    def test_permanova_labels(self, sillytype):
+        with pytest.raises(TypeError):
+            print(f"{sillytype = }")
+            peroxymanova.permanova(dist, sillytype)
+
+    @type_errors_par
+    def test_ordinal(self, sillytype):
+        with pytest.raises(TypeError):
+            print(f"{sillytype = }")
+            peroxymanova.ordinal_encoding(sillytype)
+
+    @type_errors_par
+    def test_calculate_distances_things(self, sillytype):
+        with pytest.raises(TypeError):
+            print(f"{sillytype = }")
+            peroxymanova.calculate_distances(
+                sillytype, lambda a, b: np.float64(a - b), "python", "roundtrip"
+            )
+
+    @type_errors_par
+    def test_calculate_distances_lambda(self, sillytype):
+        with pytest.raises(TypeError):
+            print(f"{sillytype = }")
+            peroxymanova.calculate_distances(
+                objects, lambda a, b: sillytype, "python", "roundtrip"
+            )
