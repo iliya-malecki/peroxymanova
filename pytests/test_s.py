@@ -38,7 +38,7 @@ def test_permanova():
 @pytest.mark.parametrize("labeltype", [np.int16, np.int64, np.str_])
 @pytest.mark.parametrize("engine", ["python", "numba"])
 @pytest.mark.parametrize("symmetrification", ["roundtrip", "one-sided"])
-def test_run_iterable(labeltype, engine, symmetrification):
+def test_pipeline_run_iterable(labeltype, engine, symmetrification):
     run_py_results = peroxymanova.permanova_pipeline(
         objects,
         distance_function,
@@ -50,7 +50,7 @@ def test_run_iterable(labeltype, engine, symmetrification):
 
 
 @pytest.mark.parametrize("labeltype", [np.int16, np.int64])
-def test_run_ordinal_encoding_on_ints(labeltype):
+def test_pipeline_run_ordinal_encoding_on_ints(labeltype):
     run_py_results = peroxymanova.permanova_pipeline(
         objects,
         distance_function,
@@ -63,7 +63,7 @@ def test_run_ordinal_encoding_on_ints(labeltype):
 
 @pytest.mark.parametrize("labeltype", [np.int16, np.int64, np.str_])
 @pytest.mark.parametrize("symmetrification", ["roundtrip", "one-sided"])
-def test_run_indexable(labeltype, symmetrification):
+def test_pipeline_run_indexable(labeltype, symmetrification):
     run_py_results = peroxymanova.permanova_pipeline(
         MockDataLoaderIndexable(objects),
         distance_function,
@@ -75,7 +75,7 @@ def test_run_indexable(labeltype, symmetrification):
 
 
 @pytest.mark.parametrize("engine", ["python", "numba"])
-def test_clean_stdout(engine, capsys: pytest.CaptureFixture[str]):
+def test_pipeline_clean_stdout(engine, capsys: pytest.CaptureFixture[str]):
     peroxymanova.permanova_pipeline(
         objects,
         distance_function,
@@ -87,7 +87,7 @@ def test_clean_stdout(engine, capsys: pytest.CaptureFixture[str]):
 
 
 @pytest.mark.parametrize("engine", ["python", "numba"])
-def test_original_data_intact(engine):
+def test_pipeline_original_data_intact(engine):
     previousdist = dist.copy()
     previouslables = labels.copy()
     peroxymanova.permanova_pipeline(
@@ -102,7 +102,7 @@ def test_original_data_intact(engine):
 
 
 @pytest.mark.parametrize("ngroups", range(2, 10))
-def test_different_number_of_groups(ngroups):
+def test_permanova_different_number_of_groups(ngroups):
     labels = np.random.randint(0, ngroups, size)
     our = peroxymanova.permanova(dist**2, labels.astype(np.uint))
     anova = f_oneway(*(objects[labels == i] for i in np.unique(labels)))
@@ -110,7 +110,7 @@ def test_different_number_of_groups(ngroups):
 
 
 @pytest.mark.parametrize("npermutations", range(3))
-def test_different_number_of_permutations(npermutations):
+def test_permanova_different_number_of_permutations(npermutations):
     labels = np.random.randint(0, 5, size)
     our = peroxymanova.permanova(
         dist**2, labels.astype(np.uint), permutations=npermutations * 10
@@ -195,3 +195,10 @@ class TestGracefulTypeErrors:
             peroxymanova.calculate_distances(
                 objects, lambda a, b: sillytype, "python", "roundtrip"
             )
+
+
+@pytest.mark.parametrize("dtype", ["str", "int64", "int32", "int16"])
+def test_ordinal_encoding_dtypes(dtype):
+    labels = np.random.randint(0, 15, 1000)
+    res = peroxymanova.ordinal_encoding(labels.astype(dtype))
+    assert res.min() == 0 and res.max() == 14
