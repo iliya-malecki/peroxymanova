@@ -126,12 +126,10 @@ jobs:
           name: wheels
           path: dist
       - name: pytest
-        if: ${{ !startsWith(matrix.target, 'aarch64') }}
+        if: ${{ matrix.target == 'aarch64' }}
         shell: bash
         run: |
           set -e
-          pip debug --verbose
-          ls dist
           pip install peroxymanova --find-links dist --force-reinstall --verbose --no-index --no-deps
           pip install peroxymanova
           pip install -r pytests/requirements.txt
