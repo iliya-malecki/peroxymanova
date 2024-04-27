@@ -104,7 +104,12 @@ pub fn permanova(
 ) -> PyResult<(f64, f64)> {
     if labels.len() <= 2 {
         return Err(PyValueError::new_err(
-            "`labels.len()` cant be <=2, you can't run permanova on that",
+            "`labels.len()` cant be <=2, permanova cant run on 2 points",
+        ));
+    }
+    if labels.iter().max().unwrap() == &0usize {
+        return Err(PyValueError::new_err(
+            "`lables` cant have only one category",
         ));
     }
     let shape = sqdistances.shape();
