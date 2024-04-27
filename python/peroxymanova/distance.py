@@ -4,7 +4,6 @@ from .types import AnySequence
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
-import itertools
 
 T = TypeVar("T")
 

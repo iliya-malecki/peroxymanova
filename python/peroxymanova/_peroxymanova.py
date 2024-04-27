@@ -18,7 +18,7 @@ from .distance import (
     get_distance_matrix_parallel,
 )
 import numpy as np
-
+import warnings
 
 T = TypeVar("T")
 Tc = TypeVar("Tc", covariant=True)
@@ -40,7 +40,7 @@ def ordinal_encoding(
     try:
         func = getattr(_oxide, f"ordinal_encoding_{suffix}")
     except NameError:
-        raise TypeError(f"input dtype {arr.dtype} not understood")
+        raise ValueError(f"input dtype {arr.dtype} not understood")
     return func(arr)
 
 
@@ -92,13 +92,18 @@ def calculate_distances(
     but exposed here for edge cases when `run` is inconvenient. For parameter
     explanation see `peroxymanova.run` docs.
     """
-    return _calculate_distances(
+    result = _calculate_distances(
         things=things,
         distance=distance,
         engine=engine,
         symmetrification=symmetrification,
         workers=workers,
     )
+    if np.isnan(result).any():
+        warnings.warn(
+            "distances contain `NaN`s, consider removing problematic entities from the list of `things`"
+        )
+    return result
 
 
 def _calculate_distances(
@@ -109,23 +114,23 @@ def _calculate_distances(
     workers: int | None = None,
 ) -> np.ndarray[Any, np.dtype[np.floating[Any]]]:
     if isinstance(things, Iterator):
-        raise ValueError(
+        raise TypeError(
             "`things` should be immutable on read, i.e. be an `Iterable` and not `Iterator`"
         )
     if workers is not None and engine in ["python", "numba"]:
-        raise ValueError("`workers` is an option for engine='concurrent.futures'")
+        raise TypeError("`workers` is an option for engine='concurrent.futures'")
 
     if not callable(distance):
-        raise ValueError("distance must be a callable")
+        raise TypeError("distance must be a callable")
 
     if engine == "python":
         if not isinstance(things, Iterable):
-            raise ValueError("`things` must be a `Iterable` for engine == 'python'")
+            raise TypeError("`things` must be a `Iterable` for engine == 'python'")
         return get_distance_matrix(things, distance, symmetrification)
 
     elif engine == "concurrent.futures":
         if not isinstance(things, AnySequence):
-            raise ValueError(
+            raise TypeError(
                 "`things` must be a `Sequence` for engine == 'concurrent.futures'"
             )
         return get_distance_matrix_parallel(things, distance, symmetrification, workers)

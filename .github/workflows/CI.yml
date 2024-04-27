@@ -126,7 +126,7 @@ jobs:
           name: wheels
           path: dist
       - name: pytest
-        if: ${{ !startsWith(matrix.target, 'aarch64') }}
+        if: ${{ matrix.target == 'aarch64' }}
         shell: bash
         run: |
           set -e

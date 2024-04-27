@@ -1,8 +1,10 @@
+use itertools::Itertools;
 use ndarray::prelude::*;
 use ndarray_rand::rand_distr::Uniform;
 use ndarray_rand::RandomExt;
 use numpy::{IntoPyArray, Ix2, PyArray1, PyReadonlyArray};
 use paste;
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use rand::seq::SliceRandom;
 use rayon::prelude::*;
@@ -99,12 +101,33 @@ pub fn permanova(
     sqdistances: PyReadonlyArray<f64, Ix2>,
     labels: Vec<usize>,
     permutations: Option<usize>,
-) -> (f64, f64) {
-    return _permanova(
+) -> PyResult<(f64, f64)> {
+    if labels.len() <= 2 {
+        return Err(PyValueError::new_err(
+            "`labels.len()` cant be <=2, you can't run permanova on that",
+        ));
+    }
+    let shape = sqdistances.shape();
+    if labels.len() != shape[0] {
+        return Err(PyValueError::new_err(
+            "The length of `labels` must equal the size of the square `sqdistances` matrix",
+        ));
+    }
+    if shape[0] != shape[1] {
+        return Err(PyValueError::new_err(
+            "The `sqdistances` matrix must be square",
+        ));
+    }
+    if !(labels.iter().min().unwrap() == &0usize
+        && labels.iter().max().unwrap() == &(labels.iter().unique().collect::<Vec<_>>().len() - 1))
+    {
+        return Err(PyValueError::new_err("`labels` must be ordinal-encoded"));
+    }
+    return Ok(_permanova(
         &sqdistances.as_array(),
         labels,
         permutations.unwrap_or(1000),
-    );
+    ));
 }
 
 pub fn ordinal_encoding<T: Eq + Hash + Clone>(labels: Vec<T>) -> Vec<usize> {
