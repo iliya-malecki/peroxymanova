@@ -120,7 +120,7 @@ def test_permanova_different_number_of_permutations(npermutations):
 
 
 class TestGracefulValueErrors:
-    def permanova_dist(self):
+    def test_permanova_dist(self):
         with pytest.raises(ValueError):
             print(
                 peroxymanova.permanova(
@@ -128,23 +128,27 @@ class TestGracefulValueErrors:
                 )
             )
 
-    def permanova_non_onehot_labels(self):
+    def test_permanova_non_onehot_labels(self):
         with pytest.raises(ValueError):
             print(peroxymanova.permanova(dist, (labels + 42).astype("uint")))
 
-    def permanova_empty_labels(self):
+    def test_permanova_empty_labels(self):
         with pytest.raises(ValueError):
             print(peroxymanova.permanova(dist, np.zeros(0).astype("uint")))
 
-    def permanova_empty_both(self):
+    def test_permanova_empty_both(self):
         with pytest.raises(ValueError):
             print(peroxymanova.permanova(np.zeros((0, 0)), np.zeros(0).astype("uint")))
 
-    def permanova_empty_dist(self):
+    def test_permanova_empty_dist(self):
         with pytest.raises(ValueError):
             print(
                 peroxymanova.permanova(np.random.random((0, 0)), labels.astype("uint"))
             )
+
+    def test_permanova_one_class(self):
+        with pytest.raises(ValueError):
+            print(peroxymanova.permanova(dist, np.zeros(size).astype("uint")))
 
 
 def test_graceful_warning_nan():
